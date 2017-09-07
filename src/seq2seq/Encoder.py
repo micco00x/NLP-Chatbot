@@ -7,15 +7,16 @@ class Encoder(torch.nn.Module):
 		self.n_layers = n_layers
 
 		self.embedding = torch.nn.Embedding(input_size, hidden_size)
-		if embedding_matrix != None:
-			self.embedding.weight.data.copy_(torch.from_numpy(embedding_matrix))
+		if embedding_matrix is not None:
+			self.embedding.weight = torch.nn.Parameter(torch.from_numpy(embedding_matrix).float())
 
-		self.lstm = torch.nn.LSTM(hidden_size, hidden_size)
+		self.gru = torch.nn.GRU(hidden_size, hidden_size)
 
 	def forward(self, input, hidden):
-		output = self.embedding(input).view(1, 1, -1)
+		embedded = self.embedding(input).view(1, 1, -1)
+		output = embedded
 		for i in range(self.n_layers):
-			output, hidden = self.lstm(output, hidden)
+			output, hidden = self.gru(output, hidden)
 		return output, hidden
 
 	def initHidden(self):
