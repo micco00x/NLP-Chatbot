@@ -32,7 +32,11 @@ class Word2Vec:
 				wordlist.append(word)
 				#pass
 
-		self.VOCABULARY_DIM = len(wordlist) + 1
+		self.UNK_SYMBOL = 0
+		self.GO_SYMBOL = 1
+		self.EOS_SYMBOL = 2
+		
+		self.VOCABULARY_DIM = len(wordlist) + 3
 		
 		self.word_to_indices = dict((c, i) for i, c in enumerate(wordlist))
 		#self.indices_to_word = dict((i, c) for i, c in enumerate(wordlist))
@@ -40,12 +44,12 @@ class Word2Vec:
 		self.embedding_matrix = np.zeros((self.VOCABULARY_DIM, self.EMBEDDING_DIM))
 		
 		for i in range(len(wordlist)):
-			self.embedding_matrix[i + 1] = veclist[i]
+			self.embedding_matrix[i + 3] = veclist[i]
 
 	# Word to index (+1 because of OOV word):
 	def w2i(self, word):
 		if word in self.word_to_indices:
-			return self.word_to_indices[word] + 1
+			return self.word_to_indices[word] + 3
 		else:
 			return 0
 
