@@ -11,6 +11,9 @@ from keras.optimizers import RMSprop
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 
+import torch
+from seq2seq.Seq2Seq import Seq2Seq
+
 # TODO: create a function split_dataset(X, Y), returns X_train, Y_train, X_dev, Y_dev, X_test, Y_test
 
 # Models to train:
@@ -32,7 +35,7 @@ print("Done.")
 ##### RELATION CLASSIFIER #####
 if TRAIN_RELATION_CLASSIFIER == True:
 	
-	print("Training relation_classifier.keras")
+	print("Training relation classifier")
 
 	X       = []
 	Y       = []
@@ -106,7 +109,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 
 ##### CONCEPT EXTRACTOR #####
 if TRAIN_CONCEPT_EXTRACTOR == True:
-	print("Training concept_extractor.keras")
+	print("Training concept extractor")
 	
 	babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
 
@@ -250,7 +253,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 	concept_extractor.save("../models/concept_extractor.keras")
 
 if TRAIN_ANSWER_GENERATOR == True:
-	print("Training answer_generator.keras")
+	print("Training answer generator")
 
 	X = []
 	Y = []
@@ -268,53 +271,24 @@ if TRAIN_ANSWER_GENERATOR == True:
 		question = elem["question"].strip().rstrip()
 		answer = elem["answer"].strip().rstrip()
 
-		X.append(word2vec.s2i(question))
-		Y.append(word2vec.s2i(answer))
-
-	# Add padding to X and Y:
-	longest_sentence_length_x = max([len(sentence) for sentence in X])
-	longest_sentence_length_y = max([len(sentence) for sentence in Y])
-	X = keras.preprocessing.sequence.pad_sequences(sequences=X, maxlen=longest_sentence_length_x)
-	Y = keras.preprocessing.sequence.pad_sequences(sequences=Y, maxlen=longest_sentence_length_y)
+		x = word2vec.s2i(question)
+		x.append(word2vec.EOS_SYMBOL)
+		y = word2vec.s2i(answer)
+		y.append(word2vec.EOS_SYMBOL)
+		X.append(torch.autograd.Variable(torch.LongTensor(x).view(-1, 1)))
+		Y.append(torch.autograd.Variable(torch.LongTensor(y).view(-1, 1)))
 
 	# Split training set into train, dev and test:
 	KB_SPLIT = 0.6
-	X_train = np.array(X[:int(len(X) * KB_SPLIT)])
-	Y_train = np.array(Y[:int(len(Y) * KB_SPLIT)])
-	X_dev   = np.array(X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)])
-	Y_dev   = np.array(Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)])
-	X_test  = np.array(X[int(len(X) * (KB_SPLIT + 1) / 2):])
-	Y_test  = np.array(Y[int(len(Y) * (KB_SPLIT + 1) / 2):])
+	X_train = X[:int(len(X) * KB_SPLIT)]
+	Y_train = Y[:int(len(Y) * KB_SPLIT)]
+	X_dev   = X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)]
+	Y_dev   = Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)]
+	X_test  = X[int(len(X) * (KB_SPLIT + 1) / 2):]
+	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
 
 	# Define the network:
-	# TODO: fazirahman4u/seq2seq consumes all the RAM
-#	answer_generator = Sequential()
-#	answer_generator.add(Embedding(input_dim=word2vec.VOCABULARY_DIM,
-#								   output_dim=word2vec.EMBEDDING_DIM,
-#								   weights=[word2vec.embedding_matrix],
-#								   trainable=True,
-#								   mask_zero=True))
-#	answer_generator.add(SimpleSeq2Seq(output_dim=word2vec.VOCABULARY_DIM,
-#									   hidden_dim=32,
-#									   output_length=longest_sentence_length_y,
-#									   input_shape=(longest_sentence_length_x, word2vec.EMBEDDING_DIM)))
-
-	# Compile the network:
-	answer_generator.compile(loss="categorical_crossentropy",
-							 optimizer=RMSprop(lr=0.01),
-							 metrics=["accuracy"])
+	seq2seq = Seq2Seq(word2vec)
 
 	# Train the network:
-	answer_generator.fit(X_train, Y_train,
-						 validation_data=(X_dev, Y_dev),
-						 batch_size=128,
-						 epochs=5)
-
-	# Results of the network on the test set:
-	loss_and_metrics = answer_generator.evaluate(X_test, Y_test)
-	print(answer_generator.metrics_names[0] + ": " + str(loss_and_metrics[0]))
-	print(answer_generator.metrics_names[1] + ": " + str(loss_and_metrics[1]))
-	
-	# Save the network:
-	concept_extractor.save("../models/answer_generator.keras")
-
+	seq2seq.train(X_train, Y_train, 5)
