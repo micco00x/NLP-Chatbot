@@ -13,8 +13,7 @@ class Encoder(torch.nn.Module):
 		self.lstm = torch.nn.LSTM(hidden_size, hidden_size)
 
 	def forward(self, input, hidden):
-		embedded = self.embedding(input).view(1, 1, -1)
-		output = embedded
+		output = self.embedding(input).view(1, 1, -1)
 		for i in range(self.n_layers):
 			output, hidden = self.lstm(output, hidden)
 		return output, hidden
