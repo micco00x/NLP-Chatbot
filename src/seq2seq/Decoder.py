@@ -19,5 +19,5 @@ class Decoder(torch.nn.Module):
 		output = self.softmax(self.out(output[0]))
 		return output, hidden
 
-	def init_hidden(self):
+	def initHidden(self):
 		return torch.autograd.Variable(torch.zeros(1, 1, self.hidden_size))

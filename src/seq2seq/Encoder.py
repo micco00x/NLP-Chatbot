@@ -18,5 +18,5 @@ class Encoder(torch.nn.Module):
 			output, hidden = self.lstm(output, hidden)
 		return output, hidden
 
-	def init_hidden(self):
+	def initHidden(self):
 		return torch.autograd.Variable(torch.zeros(1, 1, self.hidden_size))
