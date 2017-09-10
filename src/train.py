@@ -274,9 +274,9 @@ if TRAIN_ANSWER_GENERATOR == True:
 		answer = elem["answer"].strip().rstrip()
 
 		x = vocabulary.sentence2indices(question)
-		x.append(vocabulary.word2index(vocabulary.EOS_SYMBOL))
+		x.append(vocabulary.word2index[vocabulary.EOS_SYMBOL])
 		y = vocabulary.sentence2indices(answer)
-		y.append(vocabulary.word2index(vocabulary.EOS_SYMBOL))
+		y.append(vocabulary.word2index[vocabulary.EOS_SYMBOL])
 		X.append(torch.autograd.Variable(torch.LongTensor(x).view(-1, 1)))
 		Y.append(torch.autograd.Variable(torch.LongTensor(y).view(-1, 1)))
 
@@ -291,7 +291,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 
 	# Define the network:
 	emb_matrix = word2vec.createEmbeddingMatrix(vocabulary)
-	seq2seq = Seq2Seq(vocabulary.VOCABULARY_DIM, vocabulary.word2index(vocabulary.GO_SYMBOL), vocabulary.word2index(vocabulary.EOS_SYMBOL),
+	seq2seq = Seq2Seq(vocabulary.VOCABULARY_DIM, vocabulary.word2index[vocabulary.GO_SYMBOL], vocabulary.word2index[vocabulary.EOS_SYMBOL],
 					  word2vec.EMBEDDING_DIM, emb_matrix, emb_matrix)
 
 	# Train the network:

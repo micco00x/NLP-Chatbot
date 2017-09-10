@@ -28,14 +28,17 @@ class Vocabulary:
 
 	# Add word to vocabulary:
 	def addWord(self, word):
-		if word not in word2index:
-			word2index[word] = self.VOCABULARY_DIM
-			index2word[self.VOCABULARY_DIM] = word
+		if word not in self.word2index:
+			self.word2index[word] = self.VOCABULARY_DIM
+			self.index2word[self.VOCABULARY_DIM] = word
 			self.VOCABULARY_DIM += 1
 
 	# Return a list of indices given a sentence:
 	def sentence2indices(self, sentence):
 		q = []
 		for w in utils.split_words_punctuation(sentence):
-			q.append(self.word2index[w])
+			if w in self.word2index:
+				q.append(self.word2index[w])
+			else:
+				q.append(0)
 		return q

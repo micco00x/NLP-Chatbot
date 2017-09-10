@@ -8,7 +8,7 @@ class Seq2Seq:
 	def __init__(self,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
 				 vocabulary_dim, go_symbol_idx, eos_symbol_idx,
-				 embedding_dim, embedding_matrix_encoder, embedding_matrix_decoder):
+				 embedding_dim, embedding_matrix_encoder=None, embedding_matrix_decoder=None):
 		# hparams:
 		encoder_input_size = vocabulary_dim
 		encoder_hidden_size = embedding_dim
@@ -25,13 +25,13 @@ class Seq2Seq:
 		self.encoder = Encoder.Encoder(encoder_input_size,
 									   encoder_hidden_size,
 									   encoder_n_layers,
-									   embedding_matrix)
+									   embedding_matrix_encoder)
 									   
 		# Decoder:
 		self.decoder = Decoder.Decoder(decoder_hidden_size,
 									   decoder_output_size,
 									   decoder_n_layers,
-									   embedding_matrix)
+									   embedding_matrix_decoder)
 											   
 		# Optimizers:
 		self.encoder_optimizer = torch.optim.RMSprop(self.encoder.parameters())
