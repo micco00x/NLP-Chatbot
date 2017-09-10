@@ -29,7 +29,8 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Vocabulary and Word2Vec:
-vocabulary = Vocabulary("../resources/vocabulary.txt")
+vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
+vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
 print("Done.")
@@ -58,7 +59,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 
-		X.append(vocabulary.sentence2indices(elem["question"]))
+		X.append(vocabulary_big.sentence2indices(elem["question"]))
 		Y.append(relation_to_int(elem["relation"]))
 
 	print("\nDone.")
@@ -81,9 +82,9 @@ if TRAIN_RELATION_CLASSIFIER == True:
 
 	# Define the network:
 	relation_classifier = Sequential()
-	relation_classifier.add(Embedding(input_dim=vocabulary.VOCABULARY_DIM,
+	relation_classifier.add(Embedding(input_dim=vocabulary_big.VOCABULARY_DIM,
 									  output_dim=word2vec.EMBEDDING_DIM,
-									  weights=[word2vec.createEmbeddingMatrix(vocabulary)],
+									  weights=[word2vec.createEmbeddingMatrix(vocabulary_big)],
 									  trainable=True,
 									  mask_zero=True))
 	relation_classifier.add(LSTM(units=200, return_sequences=False))
@@ -177,7 +178,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 			continue
 
 		# Create data for the NN:
-		x = vocabulary.sentence2indices(answer)
+		x = vocabulary_big.sentence2indices(answer)
 		y = [[0, 0, 0, 1] for _ in range(len(x))]
 
 		if i1 == -1 or i2 == -1:
@@ -226,9 +227,9 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 
 	# Define the network:
 	concept_extractor = Sequential()
-	concept_extractor.add(Embedding(input_dim=vocabulary.VOCABULARY_DIM,
+	concept_extractor.add(Embedding(input_dim=vocabulary_big.VOCABULARY_DIM,
 									output_dim=word2vec.EMBEDDING_DIM,
-									weights=[word2vec.createEmbeddingMatrix(vocabulary)],
+									weights=[word2vec.createEmbeddingMatrix(vocabulary_big)],
 									trainable=True,
 									mask_zero=True))
 	concept_extractor.add(LSTM(units=200, return_sequences=True))
@@ -273,10 +274,10 @@ if TRAIN_ANSWER_GENERATOR == True:
 		question = elem["question"].strip().rstrip()
 		answer = elem["answer"].strip().rstrip()
 
-		x = vocabulary.sentence2indices(question)
-		x.append(vocabulary.word2index[vocabulary.EOS_SYMBOL])
-		y = vocabulary.sentence2indices(answer)
-		y.append(vocabulary.word2index[vocabulary.EOS_SYMBOL])
+		x = vocabulary_big.sentence2indices(question)
+		x.append(vocabulary_big.word2index[vocabulary_big.EOS_SYMBOL])
+		y = vocabulary_small.sentence2indices(answer)
+		y.append(vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL])
 		
 		v_x = torch.autograd.Variable(torch.LongTensor(x).view(-1, 1))
 		v_y = torch.autograd.Variable(torch.LongTensor(y).view(-1, 1))
@@ -298,9 +299,10 @@ if TRAIN_ANSWER_GENERATOR == True:
 	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
 
 	# Define the network:
-	emb_matrix = word2vec.createEmbeddingMatrix(vocabulary)
+	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
+	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
 	seq2seq = Seq2Seq(vocabulary.VOCABULARY_DIM, vocabulary.word2index[vocabulary.GO_SYMBOL], vocabulary.word2index[vocabulary.EOS_SYMBOL],
-					  word2vec.EMBEDDING_DIM, emb_matrix, emb_matrix)
+					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small)
 
 	# Train the network:
 	seq2seq.train(X_train, Y_train, 5)
