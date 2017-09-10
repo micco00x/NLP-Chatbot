@@ -32,26 +32,20 @@ for elem in knowledge_base:
 
 print("\nDone.")
 
-m2 = 0
-m3 = 0
-m4 = 0
+M = 20
+m = [0] * M
 THRESHOLD = 2
 
 for key, value in words.items():
 	#print (key, value)
-	if value >= 2:
-		m2 += 1
-	if value >= 3:
-		m3 += 1
-	if value >= 4:
-		m4 += 1
+	for i in range(M):
+		if value >= i:
+			m[i] += 1
 	if value >= THRESHOLD:
 		vocabulary.append(key)
 
-print("m1:", len(words))
-print("m2:", m2)
-print("m3:", m3)
-print("m4:", m4)
+for i in range(M):
+	print("m" + str(i) + ":", m[i])
 
 vocabulary = sorted(vocabulary)
 
