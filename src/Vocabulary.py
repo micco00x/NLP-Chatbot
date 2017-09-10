@@ -1,3 +1,5 @@
+import utils
+
 class Vocabulary:
 	def __init__(self, vocabulary_path=None):
 
@@ -28,3 +30,10 @@ class Vocabulary:
 			word2index[word] = self.VOCABULARY_DIM
 			index2word[self.VOCABULARY_DIM] = word
 			self.VOCABULARY_DIM += 1
+
+	# Return a list of indices given a sentence:
+	def sentence2indices(self, sentence):
+		q = []
+		for w in utils.split_words_punctuation(sentence):
+			q.append(self.word2index[w])
+		return q

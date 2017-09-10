@@ -7,34 +7,32 @@ from Vocabulary import Vocabulary
 
 # Word2Vec class which supports word2vec model from Google with embedding dim. of 300:
 class Word2Vec:
-	def __init__(self, word2vec_path, vocabulary_path):
+	def __init__(self, word2vec_path):#, vocabulary_path):
 		
 		# Read word2vec binary file:
-		vecmodel = KeyedVectors.load_word2vec_format(word2vec_path, binary=True)
+		self.vecmodel = KeyedVectors.load_word2vec_format(word2vec_path, binary=True)
 		self.EMBEDDING_DIM = 300
 		
 		# Set up vocabulary:
-		self.vocabulary = Vocabulary(vocabulary_path)
+		#self.vocabulary = Vocabulary(vocabulary_path)
 		
 		# Set up embedding_matrix:
-		self.embedding_matrix = np.zeros((self.vocabulary.VOCABULARY_DIM, self.EMBEDDING_DIM))
+		#self.embedding_matrix = np.zeros((self.vocabulary.VOCABULARY_DIM, self.EMBEDDING_DIM))
+		
+		#for word, idx in vocabulary.word2index.items():
+		#	try:
+		#		self.embedding_matrix[idx] = vecmodel[word]
+		#	except KeyError:
+		#		self.embedding_matrix[idx] = [0] * self.EMBEDDING_DIM
+
+	# Creates and embedding matrix given a Vocabulary object:
+	def createEmbeddingMatrix(self, vocabulary):
+		embedding_matrix = np.zeros((vocabulary.VOCABULARY_DIM, self.EMBEDDING_DIM))
 		
 		for word, idx in vocabulary.word2index.items():
 			try:
-				self.embedding_matrix[idx] = vecmodel[word]
+				embedding_matrix[idx] = self.vecmodel[word]
 			except KeyError:
-				self.embedding_matrix[idx] = [0] * self.EMBEDDING_DIM
+				embedding_matrix[idx] = [0] * self.EMBEDDING_DIM
 
-	# Word to index (+1 because of OOV word):
-	def w2i(self, word):
-		if word in self.vocabulary.word2index:
-			return self.vocabulary.word2index[word]
-		else:
-			return 0
-
-	# Sentence to indices:
-	def s2i(self, sentence):
-		q = []
-		for w in utils.split_words_punctuation(sentence):
-			q.append(self.w2i(w))
-		return q
+		return embedding_matrix
