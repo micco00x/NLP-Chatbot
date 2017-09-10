@@ -277,8 +277,16 @@ if TRAIN_ANSWER_GENERATOR == True:
 		x.append(vocabulary.word2index[vocabulary.EOS_SYMBOL])
 		y = vocabulary.sentence2indices(answer)
 		y.append(vocabulary.word2index[vocabulary.EOS_SYMBOL])
-		X.append(torch.autograd.Variable(torch.LongTensor(x).view(-1, 1)))
-		Y.append(torch.autograd.Variable(torch.LongTensor(y).view(-1, 1)))
+		
+		v_x = torch.autograd.Variable(torch.LongTensor(x).view(-1, 1))
+		v_y = torch.autograd.Variable(torch.LongTensor(y).view(-1, 1))
+		
+		if torch.cuda.is_available():
+			v_x = v_x.cuda()
+			v_y = v_y.cuda()
+		
+		X.append(v_x)
+		Y.append(v_y)
 
 	# Split training set into train, dev and test:
 	KB_SPLIT = 0.6

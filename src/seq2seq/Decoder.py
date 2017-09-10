@@ -23,4 +23,8 @@ class Decoder(torch.nn.Module):
 		return output, hidden
 
 	def initHidden(self):
-		return torch.autograd.Variable(torch.zeros(1, 1, self.hidden_size))
+		result = torch.autograd.Variable(torch.zeros(1, 1, self.hidden_size))
+		if torch.cuda.is_available():
+			return result.cuda()
+		else:
+			return result

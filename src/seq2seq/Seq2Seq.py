@@ -33,6 +33,10 @@ class Seq2Seq:
 									   decoder_output_size,
 									   decoder_n_layers,
 									   embedding_matrix_decoder)
+									   
+		if torch.cuda.is_availabe():
+			self.encoder = self.encoder.cuda()
+			self.decoder = self.decoder.cuda()
 											   
 		# Optimizers:
 		self.encoder_optimizer = torch.optim.RMSprop(self.encoder.parameters())
@@ -60,6 +64,7 @@ class Seq2Seq:
 				target_length = y.size()[0]
 
 				#encoder_outputs = torch.autograd.Variable(torch.zeros(MAX_LENGTH, self.encoder.hidden_size)) # TODO
+				#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
 				loss = 0
 
@@ -68,6 +73,8 @@ class Seq2Seq:
 					#encoder_outputs[ei] = encoder_output[0][0]
 
 				decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX]]))
+				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+				
 				decoder_hidden = encoder_hidden
 
 				teacher_forcing_ratio = 0.5
@@ -87,6 +94,7 @@ class Seq2Seq:
 						ni = topi[0][0]
 
 						decoder_input = torch.autograd.Variable(torch.LongTensor([[ni]]))
+						decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 
 						loss += self.criterion(decoder_output, y[di])
 						if ni == self.EOS_SYMBOL_IDX:
