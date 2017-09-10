@@ -265,6 +265,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
+	target_max_length = 0
 
 	for elem in knowledge_base[:50000]:
 		
@@ -279,6 +280,8 @@ if TRAIN_ANSWER_GENERATOR == True:
 		y = vocabulary_small.sentence2indices(answer)
 		y.append(vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL])
 		
+		target_max_length = max(target_max_length, len(y))
+		
 		v_x = torch.autograd.Variable(torch.LongTensor(x).view(-1, 1))
 		v_y = torch.autograd.Variable(torch.LongTensor(y).view(-1, 1))
 		
@@ -288,6 +291,8 @@ if TRAIN_ANSWER_GENERATOR == True:
 		
 		X.append(v_x)
 		Y.append(v_y)
+		
+	print("target_max_length:", target_max_length)
 
 	# Split training set into train, dev and test:
 	KB_SPLIT = 0.6
@@ -302,6 +307,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
 	seq2seq = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
+					  target_max_length,
 					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
 					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small)
