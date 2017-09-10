@@ -102,7 +102,7 @@ class Seq2Seq:
 
 				tot_loss += loss.data[0] / target_length
 				if cnt % print_every == 0:
-					print("Avg. loss at iteration " + str(cnt) + ": " + str(tot_loss/print_every))
+					print("Avg. loss at iteration " + str(cnt) + " (" + str(use_teacher_forcing) + "): " + str(tot_loss/print_every))
 					tot_loss = 0
 
 				loss.backward()
