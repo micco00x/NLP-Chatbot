@@ -22,6 +22,7 @@ class Vocabulary:
 				for w in vocabulary_file:
 					self.addWord(w.rstrip("\n"))
 
+	# Add word to vocabulary:
 	def addWord(self, word):
 		if word not in word2index:
 			word2index[word] = self.VOCABULARY_DIM
