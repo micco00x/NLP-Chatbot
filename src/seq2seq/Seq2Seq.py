@@ -8,15 +8,15 @@ from seq2seq import Encoder, Decoder
 class Seq2Seq:
 	def __init__(self,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
-				 vocabulary_dim, go_symbol_idx, eos_symbol_idx,
+				 input_vocabulary_dim, target_vocabulary_dim, go_symbol_idx, eos_symbol_idx,
 				 embedding_dim, embedding_matrix_encoder=None, embedding_matrix_decoder=None):
 		# hparams:
-		encoder_input_size = vocabulary_dim
+		encoder_input_size = input_vocabulary_dim
 		encoder_hidden_size = embedding_dim
 		encoder_n_layers = 1
 		
 		decoder_hidden_size = embedding_dim
-		decoder_output_size = vocabulary_dim
+		decoder_output_size = target_vocabulary_dim
 		decoder_n_layers = 1
 		
 		self.GO_SYMBOL_IDX = go_symbol_idx
@@ -34,7 +34,7 @@ class Seq2Seq:
 									   decoder_n_layers,
 									   embedding_matrix_decoder)
 									   
-		if torch.cuda.is_availabe():
+		if torch.cuda.is_available():
 			self.encoder = self.encoder.cuda()
 			self.decoder = self.decoder.cuda()
 											   

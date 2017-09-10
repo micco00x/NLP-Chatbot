@@ -301,7 +301,9 @@ if TRAIN_ANSWER_GENERATOR == True:
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
-	seq2seq = Seq2Seq(vocabulary.VOCABULARY_DIM, vocabulary.word2index[vocabulary.GO_SYMBOL], vocabulary.word2index[vocabulary.EOS_SYMBOL],
+	seq2seq = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
+					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
+					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
 					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small)
 
 	# Train the network:
