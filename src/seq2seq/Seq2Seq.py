@@ -41,7 +41,7 @@ class Seq2Seq:
 		self.criterion = torch.nn.NLLLoss()
 
 	def train(self, X, Y, epochs): # TODO: add X_dev=None, Y_dev=None, batch_size
-		print_every = 500
+		print_every = 50
 		for epoch in range(epochs):
 			# TODO: add padding when using batches
 			print("Epoch", epoch+1)
@@ -69,19 +69,29 @@ class Seq2Seq:
 				decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX]]))
 				decoder_hidden = encoder_hidden
 
-				# Without teacher forcing:
-				for di in range(target_length):
-					decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-					topv, topi = decoder_output.data.topk(1)
-					ni = topi[0][0]
+				teacher_forcing_ratio = 0.5
+				use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
 
-					decoder_input = torch.autograd.Variable(torch.LongTensor([[ni]]))
+				if use_teacher_forcing:
+					# With teacher forcing:
+					for di in range(target_length):
+						decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+						loss += self.criterion(decoder_output, y[di])
+						decoder_input = y[di]
+				else:
+					# Without teacher forcing:
+					for di in range(target_length):
+						decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+						topv, topi = decoder_output.data.topk(1)
+						ni = topi[0][0]
 
-					loss += self.criterion(decoder_output, y[di])
-					if ni == self.EOS_SYMBOL_IDX:
-						break
+						decoder_input = torch.autograd.Variable(torch.LongTensor([[ni]]))
 
-				tot_loss += loss.data[0]
+						loss += self.criterion(decoder_output, y[di])
+						if ni == self.EOS_SYMBOL_IDX:
+							break
+
+				tot_loss += loss.data[0] / target_length
 				if cnt % print_every == 0:
 					print("Avg. loss at iteration " + str(cnt) + ": " + str(tot_loss/print_every))
 					tot_loss = 0
@@ -92,5 +102,4 @@ class Seq2Seq:
 				self.decoder_optimizer.step()
 
 				#print("Loss (" + str(cnt) + "): " + str(loss), end="\r")
-			print("Loss:", loss)
 			
