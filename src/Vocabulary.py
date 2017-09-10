@@ -1,5 +1,7 @@
 import utils
 
+# Vocabulary class which support UNK, GO, EOS symbols
+# and a list of words from a vocabulary file:
 class Vocabulary:
 	def __init__(self, vocabulary_path=None):
 
