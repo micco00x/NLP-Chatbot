@@ -1,14 +1,15 @@
 import torch
 import random
 
-from seq2seq import Encoder, Decoder
+from seq2seq import Encoder, Decoder, AttnDecoderRNN
 
 # Inspired by http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 # and https://github.com/tensorflow/nmt
 class Seq2Seq:
 	def __init__(self,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
-				 input_vocabulary_dim, target_vocabulary_dim, go_symbol_idx, eos_symbol_idx,
+				 input_vocabulary_dim, target_vocabulary_dim, target_max_length,
+				 go_symbol_idx, eos_symbol_idx,
 				 embedding_dim, embedding_matrix_encoder=None, embedding_matrix_decoder=None):
 		# hparams:
 		encoder_input_size = input_vocabulary_dim
@@ -18,6 +19,8 @@ class Seq2Seq:
 		decoder_hidden_size = embedding_dim
 		decoder_output_size = target_vocabulary_dim
 		decoder_n_layers = 1
+		
+		self.target_max_length = target_max_length
 		
 		self.GO_SYMBOL_IDX = go_symbol_idx
 		self.EOS_SYMBOL_IDX = eos_symbol_idx
@@ -29,10 +32,16 @@ class Seq2Seq:
 									   embedding_matrix_encoder)
 									   
 		# Decoder:
-		self.decoder = Decoder.Decoder(decoder_hidden_size,
-									   decoder_output_size,
-									   decoder_n_layers,
-									   embedding_matrix_decoder)
+		#self.decoder = Decoder.Decoder(decoder_hidden_size,
+		#							   decoder_output_size,
+		#							   decoder_n_layers,
+		#							   embedding_matrix_decoder)
+		self.decoder = AttnDecoderRNN.AttnDecoderRNN(decoder_hidden_size,
+													 decoder_output_size,
+													 self.target_max_length,
+													 decoder_n_layers,
+													 0.1,
+													 embedding_matrix_decoder)
 									   
 		if torch.cuda.is_available():
 			self.encoder = self.encoder.cuda()
@@ -63,14 +72,14 @@ class Seq2Seq:
 				input_length = x.size()[0]
 				target_length = y.size()[0]
 
-				#encoder_outputs = torch.autograd.Variable(torch.zeros(MAX_LENGTH, self.encoder.hidden_size)) # TODO
-				#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
+				encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
+				encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
 				loss = 0
 
 				for ei in range(input_length):
 					encoder_output, encoder_hidden = self.encoder(x[ei], encoder_hidden)
-					#encoder_outputs[ei] = encoder_output[0][0]
+					encoder_outputs[ei] = encoder_output[0][0]
 
 				decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX]]))
 				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
@@ -83,13 +92,17 @@ class Seq2Seq:
 				if use_teacher_forcing:
 					# With teacher forcing:
 					for di in range(target_length):
-						decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+						decoder_output, decoder_hidden, decoder_attention = self.decoder(decoder_input,
+																						 decoder_hidden,
+																						 encoder_outputs)
 						loss += self.criterion(decoder_output, y[di])
 						decoder_input = y[di]
 				else:
 					# Without teacher forcing:
 					for di in range(target_length):
-						decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+						decoder_output, decoder_hidden, decoder_attention = self.decoder(decoder_input,
+																						 decoder_hidden,
+																						 encoder_outputs)
 						topv, topi = decoder_output.data.topk(1)
 						ni = topi[0][0]
 
