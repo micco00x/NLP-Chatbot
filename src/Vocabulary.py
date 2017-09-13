@@ -11,11 +11,13 @@ class Vocabulary:
 		self.index2word = {}
 		
 		# Special symbols:
+		self.PAD_SYMBOL = "<PAD>"
 		self.UNK_SYMBOL = "<UNK>"
 		self.GO_SYMBOL = "<GO>"
 		self.EOS_SYMBOL = "<EOS>"
 
 		# Add special symbols to Vocabulary:
+		self.addWord(self.PAD_SYMBOL)
 		self.addWord(self.UNK_SYMBOL)
 		self.addWord(self.GO_SYMBOL)
 		self.addWord(self.EOS_SYMBOL)

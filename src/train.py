@@ -15,6 +15,8 @@ from keras.utils import np_utils
 import torch
 from seq2seq.Seq2Seq import Seq2Seq
 
+import numpy as np
+
 # TODO: create a function split_dataset(X, Y), returns X_train, Y_train, X_dev, Y_dev, X_test, Y_test
 
 # Models to train:
@@ -29,7 +31,7 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Vocabulary and Word2Vec:
-vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
+vocabulary_small = Vocabulary("../resources/vocabulary_138K.txt")
 vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
@@ -265,10 +267,53 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	target_max_length = 0
+	#target_max_length = 0
 
+#	for elem in knowledge_base[:50000]:
+#
+#		cnt += 1
+#		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
+#
+#		question = elem["question"].strip().rstrip()
+#		answer = elem["answer"].strip().rstrip()
+#
+#		x = vocabulary_big.sentence2indices(question)
+#		x.append(vocabulary_big.word2index[vocabulary_big.EOS_SYMBOL])
+#		y = vocabulary_small.sentence2indices(answer)
+#		y.append(vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL])
+#
+#		#target_max_length = max(target_max_length, len(y))
+#
+#		# Let x and y be numpy batches of 1 element (TODO: this is temporary):
+#		x = np.array([x])
+#		y = np.array([y])
+#
+#		#v_x = torch.autograd.Variable(torch.LongTensor(x).view(-1, 1))
+#		#v_y = torch.autograd.Variable(torch.LongTensor(y).view(-1, 1))
+#		v_x = torch.autograd.Variable(torch.LongTensor(x))
+#		v_y = torch.autograd.Variable(torch.LongTensor(y))
+#
+#		if torch.cuda.is_available():
+#			v_x = v_x.cuda()
+#			v_y = v_y.cuda()
+#
+#		X.append(v_x)
+#		Y.append(v_y)
+#
+#	#print("target_max_length:", target_max_length)
+#
+#	# Split training set into train, dev and test:
+#	KB_SPLIT = 0.6
+#	X_train = X[:int(len(X) * KB_SPLIT)]
+#	Y_train = Y[:int(len(Y) * KB_SPLIT)]
+#	X_dev   = X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)]
+#	Y_dev   = Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)]
+#	X_test  = X[int(len(X) * (KB_SPLIT + 1) / 2):]
+#	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
+#	
+#########################################################################
+	
 	for elem in knowledge_base[:50000]:
-		
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -279,21 +324,10 @@ if TRAIN_ANSWER_GENERATOR == True:
 		x.append(vocabulary_big.word2index[vocabulary_big.EOS_SYMBOL])
 		y = vocabulary_small.sentence2indices(answer)
 		y.append(vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL])
-		
-		target_max_length = max(target_max_length, len(y))
-		
-		v_x = torch.autograd.Variable(torch.LongTensor(x).view(-1, 1))
-		v_y = torch.autograd.Variable(torch.LongTensor(y).view(-1, 1))
-		
-		if torch.cuda.is_available():
-			v_x = v_x.cuda()
-			v_y = v_y.cuda()
-		
-		X.append(v_x)
-		Y.append(v_y)
-		
-	print("target_max_length:", target_max_length)
-
+	
+		X.append(x)
+		Y.append(y)
+	
 	# Split training set into train, dev and test:
 	KB_SPLIT = 0.6
 	X_train = X[:int(len(X) * KB_SPLIT)]
@@ -303,14 +337,50 @@ if TRAIN_ANSWER_GENERATOR == True:
 	X_test  = X[int(len(X) * (KB_SPLIT + 1) / 2):]
 	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
 
+	batch_size = 128
+	bucket_x = [[],[],[],[]]
+	bucket_y = [[],[],[],[]]
+	padded_bucket_x = [[],[],[],[]]
+	padded_bucket_y = [[],[],[],[]]
+
+	# Put elements of X_train, Y_train in buckets depending
+	# on the length of the target sentence:
+	for x, y in zip(X_train, Y_train):
+		if len(y) <= 10:
+			bucket_x[0].append(x)
+			bucket_y[0].append(y)
+		elif len(y) <= 20:
+			bucket_x[1].append(x)
+			bucket_y[1].append(y)
+		elif len(y) <= 50:
+			bucket_x[2].append(x)
+			bucket_y[2].append(y)
+		else:
+			bucket_x[3].append(x)
+			bucket_y[3].append(y)
+
+	# Add padding to buckets:
+	for idx, (bx, by) in enumerate(zip(bucket_x, bucket_y)):
+		max_len_x = max([len(x) for x in bx])
+		max_len_y = max([len(y) for y in by])
+		for x, y in zip(bx, by):
+			x[-1:-1] = [0] * (max_len_x - len(x))
+			y[-1:-1] = [0] * (max_len_y - len(y))
+			x.reverse() # use reversed sentence to increase amount of short term dependencies
+			padded_bucket_x[idx].append(x)
+			padded_bucket_y[idx].append(y)
+
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
 	seq2seq = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
-					  target_max_length,
+					  #target_max_length,
 					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small)
+					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
+					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 
 	# Train the network:
-	seq2seq.train(X_train, Y_train, 5)
+	for epoch in range(5):
+		for bx, by in zip(padded_bucket_x, padded_bucket_y):
+			seq2seq.train(bx, by, batch_size=128)

@@ -35,10 +35,3 @@ class AttnDecoderRNN(torch.nn.Module):
 
 		output = torch.nn.functional.log_softmax(self.out(output[0]))
 		return output, hidden, attn_weights
-
-	def initHidden(self):
-		result = torch.autograd.Variable(torch.zeros(1, 1, self.hidden_size))
-		if use_cuda:
-			return result.cuda()
-		else:
-			return result

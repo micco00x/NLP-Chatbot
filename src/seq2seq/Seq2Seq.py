@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import random
 
 from seq2seq import Encoder, Decoder, AttnDecoderRNN
@@ -8,9 +9,11 @@ from seq2seq import Encoder, Decoder, AttnDecoderRNN
 class Seq2Seq:
 	def __init__(self,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
-				 input_vocabulary_dim, target_vocabulary_dim, target_max_length,
+				 input_vocabulary_dim, target_vocabulary_dim, #target_max_length,
 				 go_symbol_idx, eos_symbol_idx,
-				 embedding_dim, embedding_matrix_encoder=None, embedding_matrix_decoder=None):
+				 embedding_dim,
+				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
+				 embedding_padding_idx=None):
 		# hparams:
 		encoder_input_size = input_vocabulary_dim
 		encoder_hidden_size = embedding_dim
@@ -20,7 +23,7 @@ class Seq2Seq:
 		decoder_output_size = target_vocabulary_dim
 		decoder_n_layers = 1
 		
-		self.target_max_length = target_max_length
+		#self.target_max_length = target_max_length
 		
 		self.GO_SYMBOL_IDX = go_symbol_idx
 		self.EOS_SYMBOL_IDX = eos_symbol_idx
@@ -29,19 +32,21 @@ class Seq2Seq:
 		self.encoder = Encoder.Encoder(encoder_input_size,
 									   encoder_hidden_size,
 									   encoder_n_layers,
-									   embedding_matrix_encoder)
+									   embedding_matrix_encoder,
+									   embedding_padding_idx)
 									   
 		# Decoder:
-		#self.decoder = Decoder.Decoder(decoder_hidden_size,
-		#							   decoder_output_size,
-		#							   decoder_n_layers,
-		#							   embedding_matrix_decoder)
-		self.decoder = AttnDecoderRNN.AttnDecoderRNN(decoder_hidden_size,
-													 decoder_output_size,
-													 self.target_max_length,
-													 decoder_n_layers,
-													 0.1,
-													 embedding_matrix_decoder)
+		self.decoder = Decoder.Decoder(decoder_hidden_size,
+									   decoder_output_size,
+									   decoder_n_layers,
+									   embedding_matrix_decoder,
+									   embedding_padding_idx)
+		#self.decoder = AttnDecoderRNN.AttnDecoderRNN(decoder_hidden_size,
+		#											 decoder_output_size,
+		#											 self.target_max_length,
+		#											 decoder_n_layers,
+		#											 0.1,
+		#											 embedding_matrix_decoder)
 									   
 		if torch.cuda.is_available():
 			self.encoder = self.encoder.cuda()
@@ -54,74 +59,67 @@ class Seq2Seq:
 		# Loss:
 		self.criterion = torch.nn.NLLLoss()
 
-	def train(self, X, Y, epochs): # TODO: add X_dev=None, Y_dev=None, batch_size
-		print_every = 50
-		for epoch in range(epochs):
-			# TODO: add padding when using batches
-			print("Epoch", epoch+1)
-			cnt = 0
-			tot_loss = 0
-			for x, y in zip(X, Y):
-				cnt += 1
+	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None, batch_size
+		
+		# TODO: add padding when using batches
+		cnt = 0
+		#for x, y in zip(X, Y):
+		for idx in range(0, len(X), batch_size):
+			x = np.array(X[idx:min(idx+batch_size, len(X))])
+			y = np.array(Y[idx:min(idx+batch_size, len(Y))])
 			
-				encoder_hidden = self.encoder.initHidden()
-				
-				self.encoder_optimizer.zero_grad()
-				self.decoder_optimizer.zero_grad()
+			x = torch.autograd.Variable(torch.LongTensor(x))
+			y = torch.autograd.Variable(torch.LongTensor(y))
+			
+			if torch.cuda.is_available():
+				x = x.cuda()
+				y = y.cuda()
+		
+			#batch_size = x.size()[0]
+			
+			cnt += 1
+			
+			encoder_hidden = self.encoder.initHidden(x.size()[0])
+			
+			self.encoder_optimizer.zero_grad()
+			self.decoder_optimizer.zero_grad()
 
-				input_length = x.size()[0]
-				target_length = y.size()[0]
+			input_length = x.size()[1]
+			target_length = y.size()[1]
 
-				encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
-				encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
+			#encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
+			#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
-				loss = 0
+			loss = 0
 
-				for ei in range(input_length):
-					encoder_output, encoder_hidden = self.encoder(x[ei], encoder_hidden)
-					encoder_outputs[ei] = encoder_output[0][0]
+			encoder_output, encoder_hidden = self.encoder(x, encoder_hidden)
 
-				decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX]]))
+			decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * x.size()[0]]))
+			decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+			
+			decoder_hidden = encoder_hidden
+
+			for di in range(target_length):
+				decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+				topv, topi = decoder_output.data.topk(1)
+			
+				decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
 				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-				
-				decoder_hidden = encoder_hidden
+			
+				loss += self.criterion(decoder_output, y[:,di])
+			
+				#print("topi:")
+				#print(topi)
+				#print("y[:,di]:")
+				#print(y[:,di])
 
-				teacher_forcing_ratio = 0.5
-				use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
+			tot_loss = loss.data[0] / (target_length * x.size()[0])
+			print("Avg. loss at iteration " + str(cnt) + ": " + str(tot_loss))
 
-				if use_teacher_forcing:
-					# With teacher forcing:
-					for di in range(target_length):
-						decoder_output, decoder_hidden, decoder_attention = self.decoder(decoder_input,
-																						 decoder_hidden,
-																						 encoder_outputs)
-						loss += self.criterion(decoder_output, y[di])
-						decoder_input = y[di]
-				else:
-					# Without teacher forcing:
-					for di in range(target_length):
-						decoder_output, decoder_hidden, decoder_attention = self.decoder(decoder_input,
-																						 decoder_hidden,
-																						 encoder_outputs)
-						topv, topi = decoder_output.data.topk(1)
-						ni = topi[0][0]
+			loss.backward()
 
-						decoder_input = torch.autograd.Variable(torch.LongTensor([[ni]]))
-						decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+			self.encoder_optimizer.step()
+			self.decoder_optimizer.step()
 
-						loss += self.criterion(decoder_output, y[di])
-						if ni == self.EOS_SYMBOL_IDX:
-							break
-
-				tot_loss += loss.data[0] / target_length
-				if cnt % print_every == 0:
-					print("Avg. loss at iteration " + str(cnt) + " (" + str(use_teacher_forcing) + "): " + str(tot_loss/print_every))
-					tot_loss = 0
-
-				loss.backward()
-
-				self.encoder_optimizer.step()
-				self.decoder_optimizer.step()
-
-				#print("Loss (" + str(cnt) + "): " + str(loss), end="\r")
+			#print("Loss (" + str(cnt) + "): " + str(loss), end="\r")
 			
