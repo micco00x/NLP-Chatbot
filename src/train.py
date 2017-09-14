@@ -415,9 +415,13 @@ if TRAIN_ANSWER_GENERATOR == True:
 					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
 					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
+	seq2seq = seq2seq.cuda() if torch.cuda.is_available() else seq2seq
 
 	# Train the network:
-	train(seq2seq, padded_bucket_x_train, padded_bucket_y_train,
+	train(seq2seq,
+		  torch.optim.RMSprop(seq2seq.parameters()),
+		  torch.nn.NLLLoss(ignore_index=seq2seq.embedding_padding_idx),
+		  padded_bucket_x_train, padded_bucket_y_train,
 		  batch_size=128, epochs=5,
 		  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
 #	seq2seq.train(padded_bucket_x_train, padded_bucket_y_train,

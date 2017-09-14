@@ -121,10 +121,7 @@ class Seq2Seq(torch.nn.Module):
 		return output, hidden
 
 
-def train(model, bucket_list_X, bucket_list_Y, batch_size=32, epochs=10, validation_data=None):
-	
-	optimizer = torch.optim.RMSprop(model.parameters())
-	criterion = torch.nn.NLLLoss(ignore_index=model.embedding_padding_idx)
+def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=32, epochs=10, validation_data=None):
 	
 	# Check if dev set is defined:
 	if validation_data is not None:
@@ -168,7 +165,7 @@ def train(model, bucket_list_X, bucket_list_Y, batch_size=32, epochs=10, validat
 				#encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
 				#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
-				loss, correct_predicted_words_c, words_train_c = _forward(model, criterion, x, y)
+				loss, correct_predicted_words_c, words_train_c = compute_loss(model, criterion, x, y)
 				tot_loss += loss.data[0]
 				correct_predicted_words_cnt += correct_predicted_words_c
 				words_train_cnt += words_train_c
@@ -188,7 +185,7 @@ def train(model, bucket_list_X, bucket_list_Y, batch_size=32, epochs=10, validat
 
 		print("")
 		if validation_data is not None:
-			validation_loss, validation_accuracy = self.evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
+			validation_loss, validation_accuracy = evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
 			print("Validation Loss: " + str(validation_loss) + " | Validation Accuracy: " + str(validation_accuracy*100))
 		print("")
 
@@ -219,7 +216,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 
 			sentences_cnt += x.size()[0]
 
-			loss, correct_predicted_words_c, words_c = _forward(model, criterion, x, y)
+			loss, correct_predicted_words_c, words_c = compute_loss(model, criterion, x, y)
 			tot_loss += loss.data[0]
 			correct_predicted_words_cnt += correct_predicted_words_c
 			words_cnt += words_c
@@ -232,7 +229,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 # It performs a forward step of the whole seq2seq network computing
 # the loss, the tot. number of correct predicted words and the
 # total number of words (removes padding from counting):
-def _forward(model, criterion, x, y):
+def compute_loss(model, criterion, x, y):
 
 	encoder_input = x
 	decoder_input = torch.autograd.Variable(torch.LongTensor([[model.GO_SYMBOL_IDX] * x.size()[0]]))
