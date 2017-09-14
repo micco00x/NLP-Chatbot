@@ -38,13 +38,6 @@ class Seq2Seq(torch.nn.Module):
 			self.encoder_embedding.weight = torch.nn.Parameter(torch.from_numpy(embedding_matrix_encoder).float())
 
 		self.encoder_gru = torch.nn.GRU(embedding_dim, self.encoder_hidden_size, n_layers, batch_first=True, bidirectional=bidirectional)
-#		self.encoder = Encoder.Encoder(input_vocabulary_dim,
-#									   embedding_dim,
-#									   encoder_hidden_size,
-#									   n_layers,
-#									   bidirectional,
-#									   embedding_matrix_encoder,
-#									   embedding_padding_idx)
 									   
 		# Decoder:
 		self.decoder_embedding = torch.nn.Embedding(target_vocabulary_dim, embedding_dim, padding_idx=embedding_padding_idx)
@@ -54,30 +47,6 @@ class Seq2Seq(torch.nn.Module):
 		self.decoder_gru = torch.nn.GRU(embedding_dim, self.decoder_hidden_size, n_layers, batch_first=True, bidirectional=bidirectional)
 		self.decoder_out = torch.nn.Linear(self.decoder_hidden_size, target_vocabulary_dim)
 		self.softmax = torch.nn.LogSoftmax()
-#		self.decoder = Decoder.Decoder(target_vocabulary_dim,
-#									   embedding_dim,
-#									   decoder_hidden_size,
-#									   n_layers,
-#									   bidirectional,
-#									   embedding_matrix_decoder,
-#									   embedding_padding_idx)
-		#self.decoder = AttnDecoderRNN.AttnDecoderRNN(decoder_hidden_size,
-		#											 decoder_output_size,
-		#											 self.target_max_length,
-		#											 decoder_n_layers,
-		#											 0.1,
-		#											 embedding_matrix_decoder)
-									   
-#		if torch.cuda.is_available():
-#			self.encoder = self.encoder.cuda()
-#			self.decoder = self.decoder.cuda()
-											   
-		# Optimizers:
-#		self.encoder_optimizer = torch.optim.RMSprop(self.encoder.parameters())
-#		self.decoder_optimizer = torch.optim.RMSprop(self.decoder.parameters())
-		
-		# Loss (embedding_padding_idx is ignored, it does not contribute to input gradients):
-#		self.criterion = torch.nn.NLLLoss(ignore_index=embedding_padding_idx)
 
 	# encoder_input shape: (batch_size, encoder_seq_len)
 	# decoder_input shape: (batch_size, 1)
@@ -87,8 +56,6 @@ class Seq2Seq(torch.nn.Module):
 		batch_size = encoder_input.size()[0]
 		
 		output_data = []
-	
-		#loss = 0
 
 		encoder_output, encoder_hidden = self._encoder_forward(encoder_input)
 
@@ -105,8 +72,7 @@ class Seq2Seq(torch.nn.Module):
 			decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 
 			output_data.append(decoder_output)
-
-			#loss += self.criterion(decoder_output, y[:,di])
+		
 		return output_data
 
 	def _encoder_forward(self, input):
@@ -156,8 +122,6 @@ def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=
 					y = y.cuda()
 				
 				optimizer.zero_grad()
-				#self.encoder_optimizer.zero_grad()
-				#self.decoder_optimizer.zero_grad()
 
 				#target_length = y.size()[1]
 				sentences_train_cnt += x.size()[0]
@@ -180,8 +144,6 @@ def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=
 
 				# Update the parameters of the network:
 				optimizer.step()
-				#self.encoder_optimizer.step()
-				#self.decoder_optimizer.step()
 
 		print("")
 		if validation_data is not None:
@@ -256,37 +218,3 @@ def compute_loss(model, criterion, x, y):
 					correct_predicted_words_cnt += 1
 
 	return loss, correct_predicted_words_cnt, words_cnt
-
-#	correct_predicted_words_cnt = 0
-#	words_cnt = 0
-#
-#	target_length = y.size()[1]
-#	loss = 0
-#
-#	encoder_output, encoder_hidden = self.encoder(x)
-#
-#	decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * x.size()[0]]))
-#	decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-#
-#	decoder_hidden = encoder_hidden
-#
-#	for di in range(target_length):
-#		decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-#		topv, topi = decoder_output.data.topk(1)
-#
-#		decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
-#		decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-#
-#		loss += self.criterion(decoder_output, y[:,di])
-#
-#		# Compute number of correct predictions over current batch:
-#		for word_pred, word_true in zip(topi, y[:,di]):
-#			# NOTE: word_pred is a torch Tensor, word_true is a torch Variable.
-#			word_pred = word_pred[0]
-#			word_true = word_true.data[0]
-#			if word_true != self.PAD_SYMBOL_IDX:
-#				words_cnt += 1
-#				if word_pred == word_true:
-#					correct_predicted_words_cnt += 1
-#
-#	return loss, correct_predicted_words_cnt, words_cnt
