@@ -16,12 +16,12 @@ class Seq2Seq:
 				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
 				 embedding_padding_idx=None):
 		# hparams:
-		bidirectional = True
-		n_layers = 3
+		bidirectional = False
+		n_layers = 1
 		
 		#encoder_input_size = input_vocabulary_dim
-		encoder_hidden_size = 512
-		decoder_hidden_size = 512
+		encoder_hidden_size = 300
+		decoder_hidden_size = 300
 		#decoder_output_size = target_vocabulary_dim
 		
 		#self.target_max_length = target_max_length
@@ -66,7 +66,6 @@ class Seq2Seq:
 
 	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None
 		
-		cnt = 0
 		for idx in range(0, len(X), batch_size):
 			x = np.array(X[idx:min(idx+batch_size, len(X))])
 			y = np.array(Y[idx:min(idx+batch_size, len(Y))])
@@ -77,8 +76,6 @@ class Seq2Seq:
 			if torch.cuda.is_available():
 				x = x.cuda()
 				y = y.cuda()
-			
-			cnt += 1
 			
 			self.encoder_optimizer.zero_grad()
 			self.decoder_optimizer.zero_grad()
@@ -106,19 +103,11 @@ class Seq2Seq:
 				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 			
 				loss += self.criterion(decoder_output, y[:,di])
-			
-				#print("topi:")
-				#print(topi)
-				#print("y[:,di]:")
-				#print(y[:,di])
 
 			tot_loss = loss.data[0] / x.size()[0]
-			print("Avg. loss at iteration " + str(cnt) + ": " + str(tot_loss))
+			print("Avg. loss at iteration " + str(int(idx/batch_size+1)) + ": " + str(tot_loss))
 
 			loss.backward()
 
 			self.encoder_optimizer.step()
 			self.decoder_optimizer.step()
-
-			#print("Loss (" + str(cnt) + "): " + str(loss), end="\r")
-			
