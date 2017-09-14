@@ -110,36 +110,8 @@ class Seq2Seq:
 					tot_loss += loss.data[0]
 					correct_predicted_words_cnt += correct_predicted_words_c
 					words_train_cnt += words_train_c
-#					loss = 0
-#
-#					encoder_output, encoder_hidden = self.encoder(x)
-#
-#					decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * x.size()[0]]))
-#					decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-#
-#					decoder_hidden = encoder_hidden
-#
-#					for di in range(target_length):
-#						decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-#						topv, topi = decoder_output.data.topk(1)
-#
-#						decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
-#						decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-#
-#						loss += self.criterion(decoder_output, y[:,di])
-#
-#						# Compute number of correct predictions over current batch:
-#						for word_pred, word_true in zip(topi, y[:,di]):
-#							# NOTE: word_pred is a torch Tensor, word_true is a torch Variable.
-#							word_pred = word_pred[0]
-#							word_true = word_true.data[0]
-#							if word_true != self.PAD_SYMBOL_IDX:
-#								words_train_cnt += 1
-#								if word_pred == word_true:
-#									correct_predicted_words_cnt += 1
 
 					# Print current status of training:
-					#tot_loss += loss.data[0]
 					print("Iter: " + str(sentences_train_cnt/tot_sentences*100) + "%" +
 						  " | Training Loss: " + str(tot_loss/sentences_train_cnt) +
 						  " | Training Accuracy: " + str(correct_predicted_words_cnt/words_train_cnt*100) + "%", end="\r")
