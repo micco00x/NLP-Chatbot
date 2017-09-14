@@ -328,6 +328,8 @@ if TRAIN_ANSWER_GENERATOR == True:
 		X.append(x)
 		Y.append(y)
 	
+	print("\nDone.")
+	
 	# Split training set into train, dev and test:
 	KB_SPLIT = 0.6
 	X_train = X[:int(len(X) * KB_SPLIT)]
@@ -383,6 +385,3 @@ if TRAIN_ANSWER_GENERATOR == True:
 
 	# Train the network:
 	seq2seq.train(padded_bucket_x, padded_bucket_y, batch_size=128, epochs=5)
-	#for epoch in range(5):
-		#for bx, by in zip(padded_bucket_x, padded_bucket_y):
-			#seq2seq.train(bx, by, batch_size=128)

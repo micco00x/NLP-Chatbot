@@ -65,11 +65,13 @@ class Seq2Seq:
 
 	def train(self, bucket_list_X, bucket_list_Y, batch_size=32, epochs=1): # TODO: add X_dev=None, Y_dev=None
 		
+		# Used to count tot. number of iterations:
+		tot_sentences = sum([len(b) for b in bucket_list_X])
+		
 		for epoch in range(epochs):
 		
-			# Used to count tot. number of iterations:
-			cnt_iter = 0
-			tot_iter = sum([len(b) for b in bucket_list_X])
+			print("Epoch " + str(epoch+1) + "/" + str(epochs))
+			print("----------")
 		
 			# Used to compute accuracy over buckets:
 			correct_predicted_words_cnt = 0
@@ -81,8 +83,6 @@ class Seq2Seq:
 		
 			for X, Y in zip(bucket_list_X, bucket_list_Y):
 				for idx in range(0, len(X), batch_size):
-				
-					cnt_iter += 1
 				
 					# Init tensors:
 					x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
@@ -131,10 +131,9 @@ class Seq2Seq:
 								if word_pred == word_true:
 									correct_predicted_words_cnt += 1
 
-					#tot_loss = loss.data[0] / x.size()[0]
-					#print("Avg. loss at iteration " + str(int(idx/batch_size+1)) + ": " + str(tot_loss))
+					# Print current status of training:
 					tot_loss += loss.data[0]
-					print("Iter: " + str(cnt_iter) + "/" + str(tot_iter) +
+					print("Iter: " + str(sentences_train_cnt/tot_sentences) + "%" +
 						  " | Training Loss: " + str(tot_loss/sentences_train_cnt) +
 						  " | Training Accuracy: " + str(correct_predicted_words_cnt/words_train_cnt*100) + "%", end="\r")
 
@@ -142,3 +141,5 @@ class Seq2Seq:
 
 					self.encoder_optimizer.step()
 					self.decoder_optimizer.step()
+
+			print("\n")
