@@ -313,7 +313,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 #	
 #########################################################################
 	
-	for elem in knowledge_base[:50000]:
+	for elem in knowledge_base[:5000]:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -340,37 +340,70 @@ if TRAIN_ANSWER_GENERATOR == True:
 	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
 
 	batch_size = 128
-	bucket_x = [[],[],[],[]]
-	bucket_y = [[],[],[],[]]
-	padded_bucket_x = [[],[],[],[]]
-	padded_bucket_y = [[],[],[],[]]
+	
+	bucket_x_train = [[],[],[],[]]
+	bucket_y_train = [[],[],[],[]]
+	padded_bucket_x_train = [[],[],[],[]]
+	padded_bucket_y_train = [[],[],[],[]]
+	
+	bucket_x_dev = [[],[],[],[]]
+	bucket_y_dev = [[],[],[],[]]
+	padded_bucket_x_dev = [[],[],[],[]]
+	padded_bucket_y_dev = [[],[],[],[]]
 
 	# Put elements of X_train, Y_train in buckets depending
 	# on the length of the target sentence:
 	for x, y in zip(X_train, Y_train):
 		if len(y) <= 10:
-			bucket_x[0].append(x)
-			bucket_y[0].append(y)
+			bucket_x_train[0].append(x)
+			bucket_y_train[0].append(y)
 		elif len(y) <= 20:
-			bucket_x[1].append(x)
-			bucket_y[1].append(y)
+			bucket_x_train[1].append(x)
+			bucket_y_train[1].append(y)
 		elif len(y) <= 50:
-			bucket_x[2].append(x)
-			bucket_y[2].append(y)
+			bucket_x_train[2].append(x)
+			bucket_y_train[2].append(y)
 		else:
-			bucket_x[3].append(x)
-			bucket_y[3].append(y)
+			bucket_x_train[3].append(x)
+			bucket_y_train[3].append(y)
 
-	# Add padding to buckets:
-	for idx, (bx, by) in enumerate(zip(bucket_x, bucket_y)):
+	# Put elements of X_dev, Y_dev in buckets depending
+	# on the length of the target sentence:
+	for x, y in zip(X_dev, Y_dev):
+		if len(y) <= 10:
+			bucket_x_dev[0].append(x)
+			bucket_y_dev[0].append(y)
+		elif len(y) <= 20:
+			bucket_x_dev[1].append(x)
+			bucket_y_dev[1].append(y)
+		elif len(y) <= 50:
+			bucket_x_dev[2].append(x)
+			bucket_y_dev[2].append(y)
+		else:
+			bucket_x_dev[3].append(x)
+			bucket_y_dev[3].append(y)
+
+	# Add padding to buckets (train):
+	for idx, (bx, by) in enumerate(zip(bucket_x_train, bucket_y_train)):
 		max_len_x = max([len(x) for x in bx])
 		max_len_y = max([len(y) for y in by])
 		for x, y in zip(bx, by):
 			x[-1:-1] = [0] * (max_len_x - len(x))
 			y[-1:-1] = [0] * (max_len_y - len(y))
 			x.reverse() # use reversed sentence to increase amount of short term dependencies
-			padded_bucket_x[idx].append(x)
-			padded_bucket_y[idx].append(y)
+			padded_bucket_x_train[idx].append(x)
+			padded_bucket_y_train[idx].append(y)
+
+	# Add padding to buckets (dev):
+	for idx, (bx, by) in enumerate(zip(bucket_x_dev, bucket_y_dev)):
+		max_len_x = max([len(x) for x in bx])
+		max_len_y = max([len(y) for y in by])
+		for x, y in zip(bx, by):
+			x[-1:-1] = [0] * (max_len_x - len(x))
+			y[-1:-1] = [0] * (max_len_y - len(y))
+			x.reverse() # use reversed sentence to increase amount of short term dependencies
+			padded_bucket_x_dev[idx].append(x)
+			padded_bucket_y_dev[idx].append(y)
 
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
@@ -384,4 +417,6 @@ if TRAIN_ANSWER_GENERATOR == True:
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 
 	# Train the network:
-	seq2seq.train(padded_bucket_x, padded_bucket_y, batch_size=128, epochs=5)
+	seq2seq.train(padded_bucket_x_train, padded_bucket_y_train,
+				  batch_size=128, epochs=5,
+				  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
