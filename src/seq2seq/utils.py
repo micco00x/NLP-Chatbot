@@ -42,7 +42,7 @@ def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=
 				#encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
 				#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
-				loss, correct_predicted_words_c, words_train_c = compute_loss(model, criterion, x, y)
+				loss, correct_predicted_words_c, words_train_c = _compute_loss(model, criterion, x, y)
 				tot_loss += loss.data[0]
 				correct_predicted_words_cnt += correct_predicted_words_c
 				words_train_cnt += words_train_c
@@ -91,7 +91,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 
 			sentences_cnt += x.size()[0]
 
-			loss, correct_predicted_words_c, words_c = compute_loss(model, criterion, x, y)
+			loss, correct_predicted_words_c, words_c = _compute_loss(model, criterion, x, y)
 			tot_loss += loss.data[0]
 			correct_predicted_words_cnt += correct_predicted_words_c
 			words_cnt += words_c
@@ -104,7 +104,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 # It performs a forward step of the whole seq2seq network computing
 # the loss, the tot. number of correct predicted words and the
 # total number of words (removes padding from counting):
-def compute_loss(model, criterion, x, y):
+def _compute_loss(model, criterion, x, y):
 
 	encoder_input = x
 	decoder_input = torch.autograd.Variable(torch.LongTensor([[model.GO_SYMBOL_IDX] * x.size()[0]]))
