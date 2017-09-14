@@ -1,5 +1,4 @@
 import torch
-import random
 
 from seq2seq import Encoder, Decoder, AttnDecoderRNN
 
