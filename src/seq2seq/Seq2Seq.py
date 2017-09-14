@@ -15,12 +15,12 @@ class Seq2Seq:
 				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
 				 embedding_padding_idx=None):
 		# hparams:
-		encoder_input_size = input_vocabulary_dim
-		encoder_hidden_size = embedding_dim
+		#encoder_input_size = input_vocabulary_dim
+		encoder_hidden_size = 4096
 		encoder_n_layers = 1
 		
-		decoder_hidden_size = embedding_dim
-		decoder_output_size = target_vocabulary_dim
+		decoder_hidden_size = 4096
+		#decoder_output_size = target_vocabulary_dim
 		decoder_n_layers = 1
 		
 		#self.target_max_length = target_max_length
@@ -29,15 +29,17 @@ class Seq2Seq:
 		self.EOS_SYMBOL_IDX = eos_symbol_idx
 	
 		# Encoder:
-		self.encoder = Encoder.Encoder(encoder_input_size,
+		self.encoder = Encoder.Encoder(input_vocabulary_dim,
+									   embedding_dim,
 									   encoder_hidden_size,
 									   encoder_n_layers,
 									   embedding_matrix_encoder,
 									   embedding_padding_idx)
 									   
 		# Decoder:
-		self.decoder = Decoder.Decoder(decoder_hidden_size,
-									   decoder_output_size,
+		self.decoder = Decoder.Decoder(target_vocabulary_dim,
+									   embedding_dim,
+									   decoder_hidden_size,
 									   decoder_n_layers,
 									   embedding_matrix_decoder,
 									   embedding_padding_idx)
