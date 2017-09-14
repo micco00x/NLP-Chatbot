@@ -13,7 +13,7 @@ from keras.preprocessing import sequence
 from keras.utils import np_utils
 
 import torch
-from seq2seq.Seq2Seq import Seq2Seq
+from seq2seq.Seq2Seq import Seq2Seq, train
 
 import numpy as np
 
@@ -417,6 +417,9 @@ if TRAIN_ANSWER_GENERATOR == True:
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 
 	# Train the network:
-	seq2seq.train(padded_bucket_x_train, padded_bucket_y_train,
-				  batch_size=128, epochs=5,
-				  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
+	train(seq2seq, padded_bucket_x_train, padded_bucket_y_train,
+		  batch_size=128, epochs=5,
+		  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
+#	seq2seq.train(padded_bucket_x_train, padded_bucket_y_train,
+#				  batch_size=128, epochs=5,
+#				  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
