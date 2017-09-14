@@ -9,21 +9,23 @@ class Seq2Seq(torch.nn.Module):
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
 				 input_vocabulary_dim, target_vocabulary_dim, #target_max_length,
 				 pad_symbol_idx, go_symbol_idx, eos_symbol_idx,
+				 encoder_hidden_size, decoder_hidden_size,
 				 embedding_dim,
 				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
-				 embedding_padding_idx=None):
+				 embedding_padding_idx=None,
+				 n_layers=1, bidirectional=False):
 		
 		super(Seq2Seq, self).__init__()
 		
 		# hparams:
 		self.target_vocabulary_dim = target_vocabulary_dim
 		self.embedding_padding_idx = embedding_padding_idx
-		bidirectional = False
-		n_layers = 1
+		#bidirectional = False
+		#n_layers = 1
 		
 		#encoder_input_size = input_vocabulary_dim
-		self.encoder_hidden_size = 300
-		self.decoder_hidden_size = 300
+		self.encoder_hidden_size = encoder_hidden_size
+		self.decoder_hidden_size = decoder_hidden_size
 		#decoder_output_size = target_vocabulary_dim
 		
 		#self.target_max_length = target_max_length

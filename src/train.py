@@ -413,6 +413,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
+					  300, 300,
 					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 	seq2seq = seq2seq.cuda() if torch.cuda.is_available() else seq2seq
