@@ -56,8 +56,8 @@ class Seq2Seq:
 		self.encoder_optimizer = torch.optim.RMSprop(self.encoder.parameters())
 		self.decoder_optimizer = torch.optim.RMSprop(self.decoder.parameters())
 		
-		# Loss:
-		self.criterion = torch.nn.NLLLoss()
+		# Loss (embedding_padding_idx is ignored, it does not contribute to input gradients):
+		self.criterion = torch.nn.NLLLoss(ignore_index=embedding_padding_idx)
 
 	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None, batch_size
 		
@@ -113,7 +113,7 @@ class Seq2Seq:
 				#print("y[:,di]:")
 				#print(y[:,di])
 
-			tot_loss = loss.data[0] / (target_length * x.size()[0])
+			tot_loss = loss.data[0] / x.size()[0]
 			print("Avg. loss at iteration " + str(cnt) + ": " + str(tot_loss))
 
 			loss.backward()
