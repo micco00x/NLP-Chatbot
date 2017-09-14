@@ -15,19 +15,6 @@ class Encoder(torch.nn.Module):
 
 		self.gru = torch.nn.GRU(embedding_dim, hidden_size, n_layers, batch_first=True)
 
-	def forward(self, input, hidden):
-		#embedded = self.embedding(input).view(1, 1, -1)
+	def forward(self, input):
 		embedded = self.embedding(input)
-		#output = embedded
-		#for i in range(self.n_layers):
-		#	output, hidden = self.gru(output, hidden)
-		#return output, hidden
-		return self.gru(embedded, hidden)
-	
-
-	def initHidden(self, batch_size):
-		result = torch.autograd.Variable(torch.zeros(batch_size, self.n_layers, self.hidden_size))
-		if torch.cuda.is_available():
-			return result.cuda()
-		else:
-			return result
+		return self.gru(embedded)

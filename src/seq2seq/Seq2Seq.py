@@ -15,13 +15,12 @@ class Seq2Seq:
 				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
 				 embedding_padding_idx=None):
 		# hparams:
-		#encoder_input_size = input_vocabulary_dim
-		encoder_hidden_size = 4096
-		encoder_n_layers = 1
+		n_layers = 3
 		
-		decoder_hidden_size = 4096
+		#encoder_input_size = input_vocabulary_dim
+		encoder_hidden_size = 512
+		decoder_hidden_size = 512
 		#decoder_output_size = target_vocabulary_dim
-		decoder_n_layers = 1
 		
 		#self.target_max_length = target_max_length
 		
@@ -32,7 +31,7 @@ class Seq2Seq:
 		self.encoder = Encoder.Encoder(input_vocabulary_dim,
 									   embedding_dim,
 									   encoder_hidden_size,
-									   encoder_n_layers,
+									   n_layers,
 									   embedding_matrix_encoder,
 									   embedding_padding_idx)
 									   
@@ -40,7 +39,7 @@ class Seq2Seq:
 		self.decoder = Decoder.Decoder(target_vocabulary_dim,
 									   embedding_dim,
 									   decoder_hidden_size,
-									   decoder_n_layers,
+									   n_layers,
 									   embedding_matrix_decoder,
 									   embedding_padding_idx)
 		#self.decoder = AttnDecoderRNN.AttnDecoderRNN(decoder_hidden_size,
@@ -81,8 +80,6 @@ class Seq2Seq:
 			
 			cnt += 1
 			
-			encoder_hidden = self.encoder.initHidden(x.size()[0])
-			
 			self.encoder_optimizer.zero_grad()
 			self.decoder_optimizer.zero_grad()
 
@@ -94,7 +91,7 @@ class Seq2Seq:
 
 			loss = 0
 
-			encoder_output, encoder_hidden = self.encoder(x, encoder_hidden)
+			encoder_output, encoder_hidden = self.encoder(x)
 
 			decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * x.size()[0]]))
 			decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
