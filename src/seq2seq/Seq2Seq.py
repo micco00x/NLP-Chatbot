@@ -6,6 +6,7 @@ from seq2seq import Encoder, Decoder, AttnDecoderRNN
 
 # Inspired by http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 # and https://github.com/tensorflow/nmt
+
 class Seq2Seq:
 	def __init__(self,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
@@ -15,6 +16,7 @@ class Seq2Seq:
 				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
 				 embedding_padding_idx=None):
 		# hparams:
+		bidirectional = True
 		n_layers = 3
 		
 		#encoder_input_size = input_vocabulary_dim
@@ -32,6 +34,7 @@ class Seq2Seq:
 									   embedding_dim,
 									   encoder_hidden_size,
 									   n_layers,
+									   bidirectional,
 									   embedding_matrix_encoder,
 									   embedding_padding_idx)
 									   
@@ -40,6 +43,7 @@ class Seq2Seq:
 									   embedding_dim,
 									   decoder_hidden_size,
 									   n_layers,
+									   bidirectional,
 									   embedding_matrix_decoder,
 									   embedding_padding_idx)
 		#self.decoder = AttnDecoderRNN.AttnDecoderRNN(decoder_hidden_size,
@@ -60,11 +64,9 @@ class Seq2Seq:
 		# Loss (embedding_padding_idx is ignored, it does not contribute to input gradients):
 		self.criterion = torch.nn.NLLLoss(ignore_index=embedding_padding_idx)
 
-	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None, batch_size
+	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None
 		
-		# TODO: add padding when using batches
 		cnt = 0
-		#for x, y in zip(X, Y):
 		for idx in range(0, len(X), batch_size):
 			x = np.array(X[idx:min(idx+batch_size, len(X))])
 			y = np.array(Y[idx:min(idx+batch_size, len(Y))])
@@ -75,8 +77,6 @@ class Seq2Seq:
 			if torch.cuda.is_available():
 				x = x.cuda()
 				y = y.cuda()
-		
-			#batch_size = x.size()[0]
 			
 			cnt += 1
 			
