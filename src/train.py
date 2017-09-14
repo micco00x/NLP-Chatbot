@@ -20,6 +20,35 @@ import numpy as np
 
 # TODO: create a function split_dataset(X, Y), returns X_train, Y_train, X_dev, Y_dev, X_test, Y_test
 
+# Create buckets with padding given two sets and the dimensions of the buckets,
+# returns a list of buckets for X and a list of buckets for Y:
+def create_buckets(bucket_list_X, bucket_list_Y, dims):
+	bucket_x = [[] for _ in range(len(dims))]
+	bucket_y = [[] for _ in range(len(dims))]
+	padded_bucket_x = [[] for _ in range(len(dims))]
+	padded_bucket_y = [[] for _ in range(len(dims))]
+
+	# Put elements of X, Y in buckets depending
+	# on the length of the target sentence:
+	for x, y in zip(bucket_list_X, bucket_list_Y):
+		for idx, d in enumerate(dims):
+			if len(y) <= d:
+				bucket_x[idx].append(x)
+				bucket_y[idx].append(y)
+
+	# Add padding to buckets:
+	for idx, (bx, by) in enumerate(zip(bucket_x, bucket_y)):
+		max_len_x = max([len(x) for x in bx])
+		max_len_y = max([len(y) for y in by])
+		for x, y in zip(bx, by):
+			x[-1:-1] = [0] * (max_len_x - len(x))
+			y[-1:-1] = [0] * (max_len_y - len(y))
+			x.reverse() # use reversed sentence to increase amount of short term dependencies
+			padded_bucket_x[idx].append(x)
+			padded_bucket_y[idx].append(y)
+
+	return padded_bucket_x, padded_bucket_y
+
 # Models to train:
 TRAIN_RELATION_CLASSIFIER = False
 TRAIN_CONCEPT_EXTRACTOR = False
@@ -268,52 +297,6 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	#target_max_length = 0
-
-#	for elem in knowledge_base[:50000]:
-#
-#		cnt += 1
-#		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
-#
-#		question = elem["question"].strip().rstrip()
-#		answer = elem["answer"].strip().rstrip()
-#
-#		x = vocabulary_big.sentence2indices(question)
-#		x.append(vocabulary_big.word2index[vocabulary_big.EOS_SYMBOL])
-#		y = vocabulary_small.sentence2indices(answer)
-#		y.append(vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL])
-#
-#		#target_max_length = max(target_max_length, len(y))
-#
-#		# Let x and y be numpy batches of 1 element (TODO: this is temporary):
-#		x = np.array([x])
-#		y = np.array([y])
-#
-#		#v_x = torch.autograd.Variable(torch.LongTensor(x).view(-1, 1))
-#		#v_y = torch.autograd.Variable(torch.LongTensor(y).view(-1, 1))
-#		v_x = torch.autograd.Variable(torch.LongTensor(x))
-#		v_y = torch.autograd.Variable(torch.LongTensor(y))
-#
-#		if torch.cuda.is_available():
-#			v_x = v_x.cuda()
-#			v_y = v_y.cuda()
-#
-#		X.append(v_x)
-#		Y.append(v_y)
-#
-#	#print("target_max_length:", target_max_length)
-#
-#	# Split training set into train, dev and test:
-#	KB_SPLIT = 0.6
-#	X_train = X[:int(len(X) * KB_SPLIT)]
-#	Y_train = Y[:int(len(Y) * KB_SPLIT)]
-#	X_dev   = X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)]
-#	Y_dev   = Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)]
-#	X_test  = X[int(len(X) * (KB_SPLIT + 1) / 2):]
-#	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
-#	
-#########################################################################
-	
 	for elem in knowledge_base[:5000]:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
@@ -339,93 +322,35 @@ if TRAIN_ANSWER_GENERATOR == True:
 	Y_dev   = Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)]
 	X_test  = X[int(len(X) * (KB_SPLIT + 1) / 2):]
 	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
-
-	batch_size = 128
 	
-	bucket_x_train = [[],[],[],[]]
-	bucket_y_train = [[],[],[],[]]
-	padded_bucket_x_train = [[],[],[],[]]
-	padded_bucket_y_train = [[],[],[],[]]
-	
-	bucket_x_dev = [[],[],[],[]]
-	bucket_y_dev = [[],[],[],[]]
-	padded_bucket_x_dev = [[],[],[],[]]
-	padded_bucket_y_dev = [[],[],[],[]]
-
-	# Put elements of X_train, Y_train in buckets depending
-	# on the length of the target sentence:
-	for x, y in zip(X_train, Y_train):
-		if len(y) <= 10:
-			bucket_x_train[0].append(x)
-			bucket_y_train[0].append(y)
-		elif len(y) <= 20:
-			bucket_x_train[1].append(x)
-			bucket_y_train[1].append(y)
-		elif len(y) <= 50:
-			bucket_x_train[2].append(x)
-			bucket_y_train[2].append(y)
-		else:
-			bucket_x_train[3].append(x)
-			bucket_y_train[3].append(y)
-
-	# Put elements of X_dev, Y_dev in buckets depending
-	# on the length of the target sentence:
-	for x, y in zip(X_dev, Y_dev):
-		if len(y) <= 10:
-			bucket_x_dev[0].append(x)
-			bucket_y_dev[0].append(y)
-		elif len(y) <= 20:
-			bucket_x_dev[1].append(x)
-			bucket_y_dev[1].append(y)
-		elif len(y) <= 50:
-			bucket_x_dev[2].append(x)
-			bucket_y_dev[2].append(y)
-		else:
-			bucket_x_dev[3].append(x)
-			bucket_y_dev[3].append(y)
-
-	# Add padding to buckets (train):
-	for idx, (bx, by) in enumerate(zip(bucket_x_train, bucket_y_train)):
-		max_len_x = max([len(x) for x in bx])
-		max_len_y = max([len(y) for y in by])
-		for x, y in zip(bx, by):
-			x[-1:-1] = [0] * (max_len_x - len(x))
-			y[-1:-1] = [0] * (max_len_y - len(y))
-			x.reverse() # use reversed sentence to increase amount of short term dependencies
-			padded_bucket_x_train[idx].append(x)
-			padded_bucket_y_train[idx].append(y)
-
-	# Add padding to buckets (dev):
-	for idx, (bx, by) in enumerate(zip(bucket_x_dev, bucket_y_dev)):
-		max_len_x = max([len(x) for x in bx])
-		max_len_y = max([len(y) for y in by])
-		for x, y in zip(bx, by):
-			x[-1:-1] = [0] * (max_len_x - len(x))
-			y[-1:-1] = [0] * (max_len_y - len(y))
-			x.reverse() # use reversed sentence to increase amount of short term dependencies
-			padded_bucket_x_dev[idx].append(x)
-			padded_bucket_y_dev[idx].append(y)
+	# Create buckets:
+	buckets_dims = [10, 20, 50, max([len(y) for y in Y])]
+	padded_bucket_x_train, padded_bucket_y_train = create_buckets(X_train, Y_train, buckets_dims)
+	padded_bucket_x_dev, padded_bucket_y_dev = create_buckets(X_dev, Y_dev, buckets_dims)
+	padded_bucket_x_test, padded_bucket_y_test = create_buckets(X_test, Y_test, buckets_dims)
 
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
 	seq2seq_model = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
-					  #target_max_length,
-					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
-					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
-					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-					  300, 300,
-					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
-					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
+							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
+							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
+							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
+							300, 300,
+							word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
+							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 
 	# Train the network:
+	optimizer = torch.optim.RMSprop(seq2seq_model.parameters())
+	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
+	batch_size = 128
 	seq2seq.utils.train(seq2seq_model,
-					    torch.optim.RMSprop(seq2seq_model.parameters()),
-						torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx),
+					    optimizer,
+						criterion,
 						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=128, epochs=5,
+						batch_size=batch_size, epochs=5,
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
-#	seq2seq.train(padded_bucket_x_train, padded_bucket_y_train,
-#				  batch_size=128, epochs=5,
-#				  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
+
+	# Test the network:
+	seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
