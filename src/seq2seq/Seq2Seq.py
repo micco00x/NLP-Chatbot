@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import random
 
 from seq2seq import Encoder, Decoder, AttnDecoderRNN
@@ -67,11 +66,8 @@ class Seq2Seq:
 	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None
 		
 		for idx in range(0, len(X), batch_size):
-			x = np.array(X[idx:min(idx+batch_size, len(X))])
-			y = np.array(Y[idx:min(idx+batch_size, len(Y))])
-			
-			x = torch.autograd.Variable(torch.LongTensor(x))
-			y = torch.autograd.Variable(torch.LongTensor(y))
+			x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
+			y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]))
 			
 			if torch.cuda.is_available():
 				x = x.cuda()
