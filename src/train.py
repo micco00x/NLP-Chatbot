@@ -13,7 +13,8 @@ from keras.preprocessing import sequence
 from keras.utils import np_utils
 
 import torch
-from seq2seq.Seq2Seq import Seq2Seq, train
+from seq2seq.Seq2Seq import Seq2Seq
+import seq2seq.utils
 
 import numpy as np
 
@@ -408,7 +409,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
-	seq2seq = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
+	seq2seq_model = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
 					  #target_max_length,
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
@@ -416,15 +417,15 @@ if TRAIN_ANSWER_GENERATOR == True:
 					  300, 300,
 					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
-	seq2seq = seq2seq.cuda() if torch.cuda.is_available() else seq2seq
+	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 
 	# Train the network:
-	train(seq2seq,
-		  torch.optim.RMSprop(seq2seq.parameters()),
-		  torch.nn.NLLLoss(ignore_index=seq2seq.embedding_padding_idx),
-		  padded_bucket_x_train, padded_bucket_y_train,
-		  batch_size=128, epochs=5,
-		  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
+	seq2seq.utils.train(seq2seq_model,
+					    torch.optim.RMSprop(seq2seq_model.parameters()),
+						torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx),
+						padded_bucket_x_train, padded_bucket_y_train,
+						batch_size=128, epochs=5,
+						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
 #	seq2seq.train(padded_bucket_x_train, padded_bucket_y_train,
 #				  batch_size=128, epochs=5,
 #				  validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
