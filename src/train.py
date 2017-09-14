@@ -375,12 +375,14 @@ if TRAIN_ANSWER_GENERATOR == True:
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
 	seq2seq = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
 					  #target_max_length,
+					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 					  vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
 					  word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 					  vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 
 	# Train the network:
-	for epoch in range(5):
-		for bx, by in zip(padded_bucket_x, padded_bucket_y):
-			seq2seq.train(bx, by, batch_size=128)
+	seq2seq.train(padded_bucket_x, padded_bucket_y, batch_size=128, epochs=5)
+	#for epoch in range(5):
+		#for bx, by in zip(padded_bucket_x, padded_bucket_y):
+			#seq2seq.train(bx, by, batch_size=128)

@@ -9,7 +9,7 @@ class Seq2Seq:
 	def __init__(self,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
 				 input_vocabulary_dim, target_vocabulary_dim, #target_max_length,
-				 go_symbol_idx, eos_symbol_idx,
+				 pad_symbol_idx, go_symbol_idx, eos_symbol_idx,
 				 embedding_dim,
 				 embedding_matrix_encoder=None, embedding_matrix_decoder=None,
 				 embedding_padding_idx=None):
@@ -24,6 +24,7 @@ class Seq2Seq:
 		
 		#self.target_max_length = target_max_length
 		
+		self.PAD_SYMBOL_IDX = pad_symbol_idx
 		self.GO_SYMBOL_IDX = go_symbol_idx
 		self.EOS_SYMBOL_IDX = eos_symbol_idx
 	
@@ -62,47 +63,82 @@ class Seq2Seq:
 		# Loss (embedding_padding_idx is ignored, it does not contribute to input gradients):
 		self.criterion = torch.nn.NLLLoss(ignore_index=embedding_padding_idx)
 
-	def train(self, X, Y, batch_size): # TODO: add X_dev=None, Y_dev=None
+	def train(self, bucket_list_X, bucket_list_Y, batch_size=32, epochs=1): # TODO: add X_dev=None, Y_dev=None
 		
-		for idx in range(0, len(X), batch_size):
-			x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
-			y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]))
+		for epoch in range(epochs):
+		
+			# Used to count tot. number of iterations:
+			cnt_iter = 0
+			tot_iter = sum([len(b) for b in bucket_list_X])
+		
+			# Used to compute accuracy over buckets:
+			correct_predicted_words_cnt = 0
+			words_train_cnt = 0
 			
-			if torch.cuda.is_available():
-				x = x.cuda()
-				y = y.cuda()
-			
-			self.encoder_optimizer.zero_grad()
-			self.decoder_optimizer.zero_grad()
+			# Used to compute loss over buckets
+			tot_loss = 0
+			sentences_train_cnt = 0
+		
+			for X, Y in zip(bucket_list_X, bucket_list_Y):
+				for idx in range(0, len(X), batch_size):
+				
+					cnt_iter += 1
+				
+					# Init tensors:
+					x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
+					y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]))
+					
+					if torch.cuda.is_available():
+						x = x.cuda()
+						y = y.cuda()
+					
+					self.encoder_optimizer.zero_grad()
+					self.decoder_optimizer.zero_grad()
 
-			input_length = x.size()[1]
-			target_length = y.size()[1]
+					input_length = x.size()[1]
+					target_length = y.size()[1]
+					
+					sentences_train_cnt += x.size()[0]
 
-			#encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
-			#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
+					#encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
+					#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
-			loss = 0
+					loss = 0
 
-			encoder_output, encoder_hidden = self.encoder(x)
+					encoder_output, encoder_hidden = self.encoder(x)
 
-			decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * x.size()[0]]))
-			decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-			
-			decoder_hidden = encoder_hidden
+					decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * x.size()[0]]))
+					decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+					
+					decoder_hidden = encoder_hidden
 
-			for di in range(target_length):
-				decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-				topv, topi = decoder_output.data.topk(1)
-			
-				decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
-				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
-			
-				loss += self.criterion(decoder_output, y[:,di])
+					for di in range(target_length):
+						decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+						topv, topi = decoder_output.data.topk(1)
+					
+						decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
+						decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+					
+						loss += self.criterion(decoder_output, y[:,di])
+					
+						# Compute number of correct predictions over current batch:
+						for word_pred, word_true in zip(topi, y[:,di]):
+							# NOTE: word_pred is a torch Tensor, word_true is a torch Variable.
+							word_pred = word_pred[0]
+							word_true = word_true.data[0]
+							if word_true != self.PAD_SYMBOL_IDX:
+								words_train_cnt += 1
+								if word_pred == word_true:
+									correct_predicted_words_cnt += 1
 
-			tot_loss = loss.data[0] / x.size()[0]
-			print("Avg. loss at iteration " + str(int(idx/batch_size+1)) + ": " + str(tot_loss))
+					#tot_loss = loss.data[0] / x.size()[0]
+					#print("Avg. loss at iteration " + str(int(idx/batch_size+1)) + ": " + str(tot_loss))
+					tot_loss += loss.data[0]
+					print("Iter: " + str(cnt_iter) + "/" + str(tot_iter) +
+						  " | Training Loss: " + str(tot_loss/sentences_train_cnt) +
+						  " | Training Accuracy: " + str(correct_predicted_words_cnt/words_train_cnt*100) + "%", end="\r")
 
-			loss.backward()
+					loss.backward()
 
-			self.encoder_optimizer.step()
-			self.decoder_optimizer.step()
+					self.encoder_optimizer.step()
+					self.decoder_optimizer.step()
