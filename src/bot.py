@@ -14,13 +14,18 @@ import time
 
 import keras
 import tensorflow as tf
+import torch
 
 import numpy as np
 import re
 
+from BabelNetCache import BabelNetCache
 from QuestionGenerator import *
 from utils import *
 from Word2Vec import *
+
+from seq2seq.Seq2Seq import Seq2Seq
+import seq2seq.utils
 
 
 CHATBOT_TOKEN = "436863628:AAFHt0_YkqbjyMnoIBOltdntdRFYxd4Q-XQ"
@@ -54,10 +59,15 @@ question_generator = QuestionGenerator("../babelnet/BabelDomains_full/BabelDomai
 # BabelNetCache:
 babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
 
+# Vocabularies for seq2seq encoder/decoder:
+vocabulary_encoder = Vocabulary("../resources/vocabulary_138K.txt")
+vocabulary_decoder = Vocabulary("../resources/vocabulary_30K.txt")
+vocabulary = Vocabulary("../resources/vocabulary_138K.txt")
+
 # Word2Vec:
-print("Loading Word2Vec...")
-word2vec = Word2Vec("../resources/Word2Vec.bin", "../resources/vocabulary.txt")
-print("Done.")
+#print("Loading Word2Vec...")
+#word2vec = Word2Vec("../resources/Word2Vec.bin", "../resources/vocabulary.txt")
+#print("Done.")
 
 # Load NN models:
 print("Loading NN models...")
@@ -65,6 +75,18 @@ relation_classifier = keras.models.load_model("../models/relation_classifier.ker
 concept_extractor = keras.models.load_model("../models/concept_extractor.keras")
 print("Done.")
 graph = tf.get_default_graph()
+
+#seq2seq_model = Seq2Seq(vocabulary_encoder.VOCABULARY_DIM, vocabulary_decoder.VOCABULARY_DIM,
+#						vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL],
+#						vocabulary_decoder.word2index[vocabulary_decoder.GO_SYMBOL],
+#						vocabulary_decoder.word2index[vocabulary_decoder.EOS_SYMBOL],
+#						512, 512,
+#						300,
+#						embedding_padding_idx=vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL])
+seq2seq_model = torch.load("../models/seq2seq.pth.tar")
+seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
+seq2seq_model.mode = "eval"
+#seq2seq.utils.load(seq2seq_model, "../models/seq2seq.pth.tar")
 
 # Dictionary of user status (manage multiple users):
 user_status = {}
@@ -108,7 +130,7 @@ def handle(msg):
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
 			print("Recognizing domain:", msg["text"], "->", recognized_domain)
 			user_status[chat_id].domain = recognized_domain
-			if random.uniform(0, 1) < 0.0: # 0.5
+			if random.uniform(0, 1) < 1.0: # 0.5
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
 				user_status[chat_id].status = USER_STATUS.ASKING_QUESTION
 			else:
@@ -127,11 +149,18 @@ def handle(msg):
 				user_status[chat_id].status = USER_STATUS.ANSWERING_QUESTION
 		elif user_status[chat_id].status == USER_STATUS.ASKING_QUESTION:
 			user_status[chat_id].question = msg["text"]
-			q = word2vec.s2i(user_status[chat_id].question)
+			q = vocabulary.sentence2indices(user_status[chat_id].question)
 			with graph.as_default():
 				user_status[chat_id].relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q))[0]))
 			# TODO: send correct answer using the model
-			bot.sendMessage(chat_id, "Here's your answer! The relation is " + user_status[chat_id].relation)
+			encoder_input = torch.autograd.Variable(torch.LongTensor([q]))
+			decoder_input = torch.autograd.Variable(torch.LongTensor([[seq2seq_model.GO_SYMBOL_IDX]]))
+			if torch.cuda.is_available():
+				encoder_input = encoder_input.cuda()
+				decoder_input = decoder_input.cuda()
+			answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
+			answer = " ".join([vocabulary.index2word[w_idx] for w_idx in answer_idx])
+			bot.sendMessage(chat_id, answer + " The relation is " + user_status[chat_id].relation)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
 			answer = msg["text"]
@@ -147,7 +176,7 @@ def handle(msg):
 			elif user_status[chat_id].question_data["type"] == "X":
 				c1 = user_status[chat_id].question_data["id1"]
 				with graph.as_default():
-					c2_probability_concept = concept_extractor.predict(np.array(word2vec.s2i(answer)))
+					c2_probability_concept = concept_extractor.predict(np.array(vocabulary.sentence2indices(answer)))
 				print(c2_probability_concept)
 				c2_tokens = probabilities_to_concept_tokens(c2_probability_concept)
 				print("c2_tokens:", c2_tokens)
@@ -165,7 +194,7 @@ def handle(msg):
 				data_c2 = c2
 			else:
 				with graph.as_default():
-					c1_probability_concept = concept_extractor.predict(np.array(word2vec.s2i(answer)))
+					c1_probability_concept = concept_extractor.predict(np.array(vocabulary.sentence2indices(answer)))
 				print(c1_probability_concept)
 				c1_tokens = probabilities_to_concept_tokens(c1_probability_concept)
 				print("c1_tokens:", c1_tokens)

@@ -9,6 +9,7 @@ import utils
 
 class Seq2Seq(torch.nn.Module):
 	def __init__(self,
+				 mode,
 				 #encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
 				 input_vocabulary_dim, target_vocabulary_dim, #target_max_length,
 				 pad_symbol_idx, go_symbol_idx, eos_symbol_idx,
@@ -21,6 +22,7 @@ class Seq2Seq(torch.nn.Module):
 		super(Seq2Seq, self).__init__()
 		
 		# hparams:
+		self.mode = mode
 		self.target_vocabulary_dim = target_vocabulary_dim
 		self.embedding_padding_idx = embedding_padding_idx
 		#bidirectional = False
@@ -56,7 +58,9 @@ class Seq2Seq(torch.nn.Module):
 	# encoder_input shape: (batch_size, encoder_seq_len)
 	# decoder_input shape: (batch_size, 1)
 	# output shape (list of tensors): (batch_size, target_length, target_vocabulary_dim)
-	def forward(self, encoder_input, decoder_input, target_length=None):
+	# if target_length=None then forward will be treated as in eval mode (i.e.
+	# outpus shape will be of shape (1, length), which is the answer to the question)
+	def forward(self, encoder_input, decoder_input, target_length):
 		
 		batch_size = encoder_input.size()[0]
 		
@@ -64,20 +68,36 @@ class Seq2Seq(torch.nn.Module):
 
 		encoder_output, encoder_hidden = self._encoder_forward(encoder_input)
 
-		decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * encoder_input.size()[0]]))
-		decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+		#decoder_input = torch.autograd.Variable(torch.LongTensor([[self.GO_SYMBOL_IDX] * encoder_input.size()[0]]))
+		#decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 
 		decoder_hidden = encoder_hidden
 
-		for di in range(target_length):
-			decoder_output, decoder_hidden = self._decoder_forward(decoder_input, decoder_hidden)
-			topv, topi = decoder_output.data.topk(1)
+		if self.mode == "train":
+			for di in range(target_length):
+				decoder_output, decoder_hidden = self._decoder_forward(decoder_input, decoder_hidden)
+				topv, topi = decoder_output.data.topk(1)
 
-			decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
-			decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+				decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
+				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 
-			output_data.append(decoder_output)
-		
+				output_data.append(decoder_output)
+		else:
+			l = 0
+			while decoder_input[0].data[0] != self.EOS_SYMBOL_IDX:
+				decoder_output, decoder_hidden = self._decoder_forward(decoder_input, decoder_hidden)
+				topv, topi = decoder_output.data.topk(1)
+
+				decoder_input = torch.autograd.Variable(torch.LongTensor(topi))
+				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
+				
+				output_data.append(decoder_input[0].data[0])
+				
+				# Break if the network loops the answer:
+				l += 1
+				if l > target_length:
+					break
+	
 		return output_data
 
 	def _encoder_forward(self, input):

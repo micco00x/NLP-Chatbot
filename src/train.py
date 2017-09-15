@@ -62,7 +62,7 @@ print("Done.")
 
 # Vocabulary and Word2Vec:
 vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
-vocabulary_big = Vocabulary("../resources/vocabulary_30K.txt")
+vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
 print("Done.")
@@ -297,7 +297,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	for elem in knowledge_base[:3000]:
+	for elem in knowledge_base[:5000]:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -336,7 +336,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-							100, 100,
+							512, 512,
 							word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
@@ -346,10 +346,11 @@ if TRAIN_ANSWER_GENERATOR == True:
 	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
 	batch_size = 128
 	seq2seq.utils.train(seq2seq_model,
+						"train",
 					    optimizer,
 						criterion,
 						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=batch_size, epochs=3,
+						batch_size=batch_size, epochs=10,
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
 						checkpoint_dir="../models",
 						early_stopping_max=3)

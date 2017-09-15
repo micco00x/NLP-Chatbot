@@ -171,10 +171,11 @@ def _compute_loss(model, criterion, x, y):
 	return loss, correct_predicted_words_cnt, words_cnt
 
 def save(model, path, best_path=None):
-	torch.save(model.state_dict(), path)
+	#torch.save(model.state_dict(), path)
+	torch.save(model, path)
 	if best_path:
 		shutil.copyfile(path, best_path)
 
-def load(model, path):
-	model.load_state_dict(torch.load(path))
-	return model
+#def load(model, path):
+#	model.load_state_dict(torch.load(path))
+#	return model
