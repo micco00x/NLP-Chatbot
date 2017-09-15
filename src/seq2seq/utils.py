@@ -1,6 +1,12 @@
 import torch
+import shutil
 
-def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=32, epochs=10, validation_data=None):
+def train(model, optimizer, criterion,
+		  bucket_list_X, bucket_list_Y,
+		  batch_size=32, epochs=10,
+		  validation_data=None,
+		  checkpoint_dir=None,
+		  early_stopping_max=None):
 	
 	# Check if dev set is defined:
 	if validation_data is not None:
@@ -9,6 +15,12 @@ def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=
 	
 	# Used to count tot. number of iterations:
 	tot_sentences = sum([len(b) for b in bucket_list_X])
+
+	# Best accuracy (used to save best model):
+	best_acc = 0
+
+	# Early stopping counter (epochs without improvements):
+	early_stopping_cnt = 0
 	
 	for epoch in range(epochs):
 	
@@ -48,9 +60,11 @@ def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=
 				words_train_cnt += words_train_c
 
 				# Print current status of training:
-				print("Iter: " + str(sentences_train_cnt/tot_sentences*100) + "%" +
-					  " | Training Loss: " + str(tot_loss/sentences_train_cnt) +
-					  " | Training Accuracy: " + str(correct_predicted_words_cnt/words_train_cnt*100) + "%", end="\r")
+				training_loss = tot_loss / sentences_train_cnt
+				training_accuracy = correct_predicted_words_cnt / words_train_cnt
+				print("Iter: %2.3f%% | Training Loss: %2.3f | Training Accuracy: %2.3f%%" %
+					  (sentences_train_cnt/tot_sentences*100, training_loss, training_accuracy*100),
+					  end="\r")
 
 				# Compute gradients:
 				loss.backward()
@@ -59,10 +73,34 @@ def train(model, optimizer, criterion, bucket_list_X, bucket_list_Y, batch_size=
 				optimizer.step()
 
 		print("")
-		if validation_data is not None:
+
+		# Compute loss and accuracy on dev set:
+		if validation_data:
 			validation_loss, validation_accuracy = evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
-			print("Validation Loss: " + str(validation_loss) + " | Validation Accuracy: " + str(validation_accuracy*100))
+			print("Validation Loss: %2.3f | Validation Accuracy: %2.3f%%" % (validation_loss, validation_accuracy*100))
+			is_best = best_acc < validation_accuracy
+			best_acc = max(best_acc, validation_accuracy)
+		else:
+			is_best = best_acc < training_accuracy
+			best_acc = max(best_acc, training_accuracy)
+
 		print("")
+
+		# Save checkpoint if specified:
+		if checkpoint_dir:
+			save(model,
+				 checkpoint_dir + "/seq2seq_epoch_" + str(epoch) + ".pth.tar",
+				 checkpoint_dir + "/seq2seq_best.pth.tar" if is_best else None)
+
+		# Early stopping:
+		if early_stopping_max:
+			if is_best:
+				early_stopping_cnt = 0
+			else:
+				early_stopping_cnt += 1
+			if early_stopping_max < early_stopping_cnt:
+				break
+
 
 # Evaluate the network on a list of buckets,
 # returns loss and accuracy:
@@ -96,7 +134,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 			correct_predicted_words_cnt += correct_predicted_words_c
 			words_cnt += words_c
 
-			print("Iter: " + str(sentences_cnt/tot_sentences*100) + "%", end="\r")
+			print("Iter: %2.3f%%" % (sentences_cnt/tot_sentences*100), end="\r")
 
 	return tot_loss / sentences_cnt, correct_predicted_words_cnt / words_cnt
 
@@ -131,3 +169,12 @@ def _compute_loss(model, criterion, x, y):
 					correct_predicted_words_cnt += 1
 
 	return loss, correct_predicted_words_cnt, words_cnt
+
+def save(model, path, best_path=None):
+	torch.save(model.state_dict(), path)
+	if best_path:
+		shutil.copyfile(path, best_path)
+
+def load(model, path):
+	model.load_state_dict(torch.load(path))
+	return model

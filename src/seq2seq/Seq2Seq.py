@@ -1,9 +1,11 @@
 import torch
 import utils
-#from seq2seq import Encoder, Decoder, AttnDecoderRNN
 
-# Inspired by http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
-# and https://github.com/tensorflow/nmt
+#########################################################################################
+# Inspired by:
+#     [1] http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
+#     [2] https://github.com/tensorflow/nmt
+#########################################################################################
 
 class Seq2Seq(torch.nn.Module):
 	def __init__(self,

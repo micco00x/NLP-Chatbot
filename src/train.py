@@ -61,8 +61,8 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Vocabulary and Word2Vec:
-vocabulary_small = Vocabulary("../resources/vocabulary_138K.txt")
-vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
+vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
+vocabulary_big = Vocabulary("../resources/vocabulary_30K.txt")
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
 print("Done.")
@@ -297,7 +297,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	for elem in knowledge_base[:5000]:
+	for elem in knowledge_base[:3000]:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -336,7 +336,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-							300, 300,
+							100, 100,
 							word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
 	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
@@ -349,9 +349,11 @@ if TRAIN_ANSWER_GENERATOR == True:
 					    optimizer,
 						criterion,
 						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=batch_size, epochs=5,
-						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
+						batch_size=batch_size, epochs=3,
+						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
+						checkpoint_dir="../models",
+						early_stopping_max=3)
 
 	# Test the network:
 	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
-	print("Test Loss: " + str(test_loss) + " | Test Accuracy: " + str(test_accuracy*100))
+	print("Test Loss: %2.3f | Test Accuracy: %2.3f%%" % (test_loss, test_accuracy*100))
