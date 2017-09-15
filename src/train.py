@@ -353,4 +353,5 @@ if TRAIN_ANSWER_GENERATOR == True:
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev])
 
 	# Test the network:
-	seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
+	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
+	print("Test Loss: " + str(test_loss) + " | Test Accuracy: " + str(test_accuracy*100))
