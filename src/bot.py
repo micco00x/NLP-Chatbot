@@ -159,7 +159,7 @@ def handle(msg):
 				encoder_input = encoder_input.cuda()
 				decoder_input = decoder_input.cuda()
 			answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
-			answer = " ".join([vocabulary.index2word[w_idx] for w_idx in answer_idx])
+			answer = " ".join([vocabulary.index2word[w_idx] for w_idx in answer_idx[:-1]])
 			bot.sendMessage(chat_id, answer + " The relation is " + user_status[chat_id].relation)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
