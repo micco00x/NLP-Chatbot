@@ -289,7 +289,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	for elem in knowledge_base[:10000]:
+	for elem in knowledge_base:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -323,9 +323,10 @@ if TRAIN_ANSWER_GENERATOR == True:
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-							512, 512,
+							2048, 2048,
 							word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
-							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL])
+							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
+							3, True)
 	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 
 	# Train the network:
