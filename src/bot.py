@@ -73,7 +73,6 @@ vocabulary = Vocabulary("../resources/vocabulary_138K.txt")
 print("Loading NN models...")
 relation_classifier = keras.models.load_model("../models/relation_classifier.keras")
 concept_extractor = keras.models.load_model("../models/concept_extractor.keras")
-print("Done.")
 graph = tf.get_default_graph()
 
 #seq2seq_model = Seq2Seq(vocabulary_encoder.VOCABULARY_DIM, vocabulary_decoder.VOCABULARY_DIM,
@@ -87,6 +86,8 @@ seq2seq_model = torch.load("../models/seq2seq.pth.tar")
 seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 seq2seq_model.mode = "eval"
 #seq2seq.utils.load(seq2seq_model, "../models/seq2seq.pth.tar")
+
+print("Done.")
 
 # Dictionary of user status (manage multiple users):
 user_status = {}
