@@ -61,7 +61,7 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Vocabulary and Word2Vec:
-vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
+vocabulary_small = Vocabulary("../resources/vocabulary_138K.txt")
 vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
@@ -297,7 +297,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = len(knowledge_base)
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	for elem in knowledge_base[:5000]:
+	for elem in knowledge_base[:10000]:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -332,7 +332,8 @@ if TRAIN_ANSWER_GENERATOR == True:
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
-	seq2seq_model = Seq2Seq(vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
+	seq2seq_model = Seq2Seq("train",
+							vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
@@ -346,11 +347,10 @@ if TRAIN_ANSWER_GENERATOR == True:
 	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
 	batch_size = 128
 	seq2seq.utils.train(seq2seq_model,
-						"train",
 					    optimizer,
 						criterion,
 						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=batch_size, epochs=10,
+						batch_size=batch_size, epochs=20,
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
 						checkpoint_dir="../models",
 						early_stopping_max=3)
