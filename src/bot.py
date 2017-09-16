@@ -27,7 +27,6 @@ from Word2Vec import *
 from seq2seq.Seq2Seq import Seq2Seq
 import seq2seq.utils
 
-
 CHATBOT_TOKEN = "436863628:AAFHt0_YkqbjyMnoIBOltdntdRFYxd4Q-XQ"
 BABELNET_KEY = "5aa541b8-e16d-4170-8e87-868c0bff9a5e"
 
@@ -131,7 +130,7 @@ def handle(msg):
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
 			print("Recognizing domain:", msg["text"], "->", recognized_domain)
 			user_status[chat_id].domain = recognized_domain
-			if random.uniform(0, 1) < 1.0: # 0.5
+			if random.uniform(0, 1) < 0.0: # 0.5
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
 				user_status[chat_id].status = USER_STATUS.ASKING_QUESTION
 			else:
@@ -194,6 +193,7 @@ def handle(msg):
 				data_c1 = user_status[chat_id].question_data["c1"] + "::" + c1
 				data_c2 = c2
 			else:
+				c2 = user_status[chat_id].question_data["id2"]
 				with graph.as_default():
 					c1_probability_concept = concept_extractor.predict(np.array(vocabulary.sentence2indices(answer)))
 				print(c1_probability_concept)
@@ -209,16 +209,16 @@ def handle(msg):
 						c1_tokens[1] = idx
 				print("c1_tokens:", c1_tokens)
 				c1 = babelfy_disambiguate(answer, c1_tokens[0], c1_tokens[1])
-				w1 = "" # word already in c1 (format w::bn:--n)
-				data_c2 = user_status[chat_id].question_data["id2"] + "::" + c2
+				data_c1 = c1
+				data_c2 = user_status[chat_id].question_data["c2"] + "::" + c2
 			data = {
 				"question": user_status[chat_id].question,
 				"answer": answer,
 				"relation": user_status[chat_id].relation,
 				"context": "C",
 				"domains": [user_status[chat_id].domain],
-				"c1": data_c1, # TO TEST: w::bn:--n"
-				"c2": data_c2  # TO TEST: w::bn:--n"
+				"c1": data_c1,
+				"c2": data_c2
 			}
 
 			print("Enriching KB with:")

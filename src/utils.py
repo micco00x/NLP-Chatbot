@@ -6,6 +6,8 @@ from io import BytesIO
 
 import re
 
+import numpy as np
+
 BABELNET_KEY  = "5aa541b8-e16d-4170-8e87-868c0bff9a5e"
 
 # Query to BabelNet to get the lemma of the BabelNetID:
@@ -72,54 +74,41 @@ def babelfy_disambiguate(sentence, concept_start, concept_end):
 			print(("\t" + str(tfStart) + "\t" + str(tfEnd)))
 			
 			if tfStart == concept_start and tfEnd == concept_end:
-				return " ".join(sentence.split()[concept_start:concept_end+1]) + sresult.get("babelSynsetID") # TO TEST
+				return " ".join(sentence.split()[concept_start:concept_end+1]) + "::" + result.get("babelSynsetID")
 
 	return " ".join(sentence.split()[concept_start:concept_end+1])
 
-# Given a set of N pairs of probabilities representing Begin/End/Other,
-# returns the first and the last indices (of NN) corresponding
-# to concept tokens:
+# Given a set of N pairs of probabilities representing
+# (Begin+End, Begin (but not End), End (but not Begin), Other (not Begin nor End)),
+# (see concept extractor implementation in train.py), returns the first and the
+# last indices (of NN) corresponding to concept tokens:
 def probabilities_to_concept_tokens(probabilities):
-	tokens = [0, 0]
-	maxP = 0
-	
-	# Search for argmax{P(x=Begin,y=end)}:
-	# TO TEST:
+	# Search for highest P between Begin+End and Begin token:
+	B = 0   # index of begin token
+	B_p = 0 # probability at begin token index
+	is_begin = False
 	for x in range(len(probabilities)):
-		for y in range(x, len(probabilities)):
-			p = probabilities[x][0][0] * probabilities[y][0][1]
-			if p > maxP:
-				maxP = p
-				tokens = [x, y]
-	
-#	for _ in range(len(probabilities)):
-#		if probabilities[_][0][0] > probabilities[_][0][1]:
-#			tokens[0] = _
-#			break
-#	for _ in range(len(probabilities) - 1, -1, -1):
-#		if probabilities[_][0][0] > probabilities[_][0][1]:
-#			tokens[1] = _
-#			break
-	return tokens
+		argmax = np.argmax(probabilities[x][0])
+		if probabilities[x][0][argmax] > B_p and argmax < 2:
+			B = x
+			B_p = probabilities[x][0][argmax]
+			if argmax == 0:
+				is_begin = False
+			if argmax == 1:
+				is_begin = True
 
-# Validate the value of concept_tokens given the number
-# of tokens in a sentence, concept_tokens must be a
-# list with 2 values:
-#def validate_concept_tokens(concept_tokens, num_tokens):
-#	print("Validating:", concept_tokens, num_tokens)
-#	concept_tokens = [int(round(concept_tokens[0])), int(round(concept_tokens[1]))]
-#	if concept_tokens[0] < 0:
-#		concept_tokens[0] = 0
-#	if concept_tokens[1] < 0:
-#		concept_tokens[1] = 0
-#	if concept_tokens[0] >= num_tokens:
-#		concept_tokens[0] = num_tokens - 1
-#	if concept_tokens[1] >= num_tokens:
-#		concept_tokens[1] = num_tokens - 1
-#	if concept_tokens[0] > concept_tokens[1]:
-#		concept_tokens[0] = concept_tokens[1]
-#	print("\t", concept_tokens)
-#	return concept_tokens
+	if is_begin == False:
+		return [B, B]
+
+	E = B   # index of end token
+	E_p = 0 # probability at end token index
+	for x in range(B, len(probabilities)):
+		argmax = np.argmax(probabilities[x][0])
+		if probabilities[x][0][argmax] > E_p and argmax == 2:
+			E = x
+			E_p = probabilities[x][0][argmax]
+
+	return [B, E]
 
 # Convert relation string to int:
 def relation_to_int(relation):

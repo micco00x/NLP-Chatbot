@@ -225,7 +225,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 		#print("i2:", i2)
 		
 		# Begin and end of the concept,
-		# activation is (Begin+End, Begin (but not End), End (but not Begin), Other (not Begin nor End):
+		# activation is (Begin+End, Begin (but not End), End (but not Begin), Other (not Begin nor End)):
 		if i1 == i2:
 			y[i1] = [1, 0, 0, 0]
 		else:
