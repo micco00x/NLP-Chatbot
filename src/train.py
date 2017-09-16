@@ -18,7 +18,17 @@ import seq2seq.utils
 
 import numpy as np
 
-# TODO: create a function split_dataset(X, Y), returns X_train, Y_train, X_dev, Y_dev, X_test, Y_test
+# Split dataset into training set (pSplit %), dev set
+# and test set (of equal dimension):
+def split_dataset(X, Y, pSplit):
+	X_train = X[:int(len(X) * pSplit)]
+	Y_train = Y[:int(len(Y) * pSplit)]
+	X_dev   = X[int(len(X) * pSplit):int(len(X) * (pSplit + 1) / 2)]
+	Y_dev   = Y[int(len(Y) * pSplit):int(len(Y) * (pSplit + 1) / 2)]
+	X_test  = X[int(len(X) * (pSplit + 1) / 2):]
+	Y_test  = Y[int(len(Y) * (pSplit + 1) / 2):]
+
+	return X_train, Y_train, X_dev, Y_dev, X_test, Y_test
 
 # Create buckets with padding given two sets and the dimensions of the buckets,
 # returns a list of buckets for X and a list of buckets for Y:
@@ -72,14 +82,8 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	
 	print("Training relation classifier")
 
-	X       = []
-	Y       = []
-	X_train = []
-	Y_train = []
-	X_dev   = []
-	Y_dev   = []
-	X_test  = []
-	Y_test  = []
+	X = []
+	Y = []
 
 	cnt = 0
 	kb_len = len(knowledge_base)
@@ -104,13 +108,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	X = keras.preprocessing.sequence.pad_sequences(sequences=X, maxlen=longest_sentence_length)
 
 	# Split training set into train, dev and test:
-	KB_SPLIT = 0.6
-	X_train = np.array(X[:int(len(X) * KB_SPLIT)])
-	Y_train = np.array(Y[:int(len(Y) * KB_SPLIT)])
-	X_dev   = np.array(X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)])
-	Y_dev   = np.array(Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)])
-	X_test  = np.array(X[int(len(X) * (KB_SPLIT + 1) / 2):])
-	Y_test  = np.array(Y[int(len(Y) * (KB_SPLIT + 1) / 2):])
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, 0.6)
 
 	# Define the network:
 	relation_classifier = Sequential()
@@ -249,13 +247,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 	Y = keras.preprocessing.sequence.pad_sequences(sequences=Y, maxlen=longest_sentence_length)
 
 	# Split training set into train, dev and test:
-	KB_SPLIT = 0.6
-	X_train = np.array(X[:int(len(X) * KB_SPLIT)])
-	Y_train = np.array(Y[:int(len(Y) * KB_SPLIT)])
-	X_dev   = np.array(X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)])
-	Y_dev   = np.array(Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)])
-	X_test  = np.array(X[int(len(X) * (KB_SPLIT + 1) / 2):])
-	Y_test  = np.array(Y[int(len(Y) * (KB_SPLIT + 1) / 2):])
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, 0.6)
 
 	# Define the network:
 	concept_extractor = Sequential()
@@ -315,13 +307,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	print("\nDone.")
 	
 	# Split training set into train, dev and test:
-	KB_SPLIT = 0.6
-	X_train = X[:int(len(X) * KB_SPLIT)]
-	Y_train = Y[:int(len(Y) * KB_SPLIT)]
-	X_dev   = X[int(len(X) * KB_SPLIT):int(len(X) * (KB_SPLIT + 1) / 2)]
-	Y_dev   = Y[int(len(Y) * KB_SPLIT):int(len(Y) * (KB_SPLIT + 1) / 2)]
-	X_test  = X[int(len(X) * (KB_SPLIT + 1) / 2):]
-	Y_test  = Y[int(len(Y) * (KB_SPLIT + 1) / 2):]
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, 0.6)
 	
 	# Create buckets:
 	buckets_dims = [10, 20, 50, max([len(y) for y in Y])]
