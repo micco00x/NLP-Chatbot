@@ -6,7 +6,9 @@ def train(model, optimizer, criterion,
 		  batch_size=32, epochs=10,
 		  validation_data=None,
 		  checkpoint_dir=None,
-		  early_stopping_max=None):
+		  early_stopping_max=None,
+		  starting_epoch=0,
+		  best_acc=0):
 	
 	# Check if dev set is defined:
 	if validation_data is not None:
@@ -16,13 +18,10 @@ def train(model, optimizer, criterion,
 	# Used to count tot. number of iterations:
 	tot_sentences = sum([len(b) for b in bucket_list_X])
 
-	# Best accuracy (used to save best model):
-	best_acc = 0
-
 	# Early stopping counter (epochs without improvements):
 	early_stopping_cnt = 0
 	
-	for epoch in range(epochs):
+	for epoch in range(starting_epoch, epochs):
 	
 		print("Epoch " + str(epoch+1) + "/" + str(epochs))
 		print("----------")
@@ -88,9 +87,17 @@ def train(model, optimizer, criterion,
 
 		# Save checkpoint if specified:
 		if checkpoint_dir:
-			save(model,
-				 checkpoint_dir + "/seq2seq_epoch_" + str(epoch) + ".pth.tar",
-				 checkpoint_dir + "/seq2seq_best.pth.tar" if is_best else None)
+			state = {
+				"epoch": epoch+1,
+				"state_dict": model.state_dict(),
+				"best_acc": best_acc,
+				"optimizer": optimizer.state_dict()
+			}
+			
+			filename = checkpoint_dir + "/seq2seq_epoch_" + str(epoch+1) + ".pth.tar"
+			save_checkpoint(state, filename)
+			if is_best:
+				shutil.copyfile(filename, checkpoint_dir + "/seq2seq_best.pth.tar")
 
 		# Early stopping:
 		if early_stopping_max:
@@ -170,12 +177,5 @@ def _compute_loss(model, criterion, x, y):
 
 	return loss, correct_predicted_words_cnt, words_cnt
 
-def save(model, path, best_path=None):
-	#torch.save(model.state_dict(), path)
-	torch.save(model, path)
-	if best_path:
-		shutil.copyfile(path, best_path)
-
-#def load(model, path):
-#	model.load_state_dict(torch.load(path))
-#	return model
+def save_checkpoint(state, filename):
+    torch.save(state, filename)

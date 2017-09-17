@@ -297,7 +297,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	kb_len = int(len(knowledge_base) * hparams_answer_generator["kbLenPercentage"])
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	for elem in knowledge_base:
+	for elem in knowledge_base[:kb_len]:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
@@ -342,6 +342,16 @@ if TRAIN_ANSWER_GENERATOR == True:
 	# Train the network:
 	optimizer = torch.optim.RMSprop(seq2seq_model.parameters())
 	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
+	starting_epoch = 0
+	best_acc = 0
+
+	if hparams_answer_generator["checkpoint"]:
+		checkpoint = torch.load(hparams_answer_generator["checkpoint"])
+		starting_epoch = checkpoint["epoch"]
+		seq2seq_model.load_state_dict(checkpoint["state_dict"])
+		best_acc = checkpoint["best_acc"]
+		optimizer.load_state_dict(checkpoint["optimizer"])
+
 	seq2seq.utils.train(seq2seq_model,
 					    optimizer,
 						criterion,
@@ -350,7 +360,9 @@ if TRAIN_ANSWER_GENERATOR == True:
 						epochs=hparams_answer_generator["epochs"],
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
 						checkpoint_dir="../models",
-						early_stopping_max=hparams_answer_generator["earlyStoppingMax"])
+						early_stopping_max=hparams_answer_generator["earlyStoppingMax"],
+						starting_epoch=starting_epoch,
+						best_acc=best_acc)
 
 	# Test the network:
 	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
