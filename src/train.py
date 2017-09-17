@@ -342,6 +342,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	# Train the network:
 	optimizer = torch.optim.RMSprop(seq2seq_model.parameters())
 	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
+	criterion = criterion.cuda() if torch.cuda.is_available() else criterion
 	starting_epoch = 0
 	best_acc = 0
 
