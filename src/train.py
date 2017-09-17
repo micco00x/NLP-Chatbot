@@ -343,6 +343,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	optimizer = torch.optim.RMSprop(seq2seq_model.parameters())
 	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
 	criterion = criterion.cuda() if torch.cuda.is_available() else criterion
+	batch_size = hparams_answer_generator["batchSize"]
 	starting_epoch = 0
 	best_acc = 0
 
@@ -357,7 +358,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 					    optimizer,
 						criterion,
 						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=hparams_answer_generator["batchSize"],
+						batch_size=batch_size,
 						epochs=hparams_answer_generator["epochs"],
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
 						checkpoint_dir="../models",
