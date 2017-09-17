@@ -145,7 +145,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 def _compute_loss(model, criterion, x, y):
 
 	encoder_input = x
-	decoder_input = torch.autograd.Variable(torch.LongTensor([[model.GO_SYMBOL_IDX] * x.size()[0]]))
+	decoder_input = torch.autograd.Variable(torch.LongTensor([[model.GO_SYMBOL_IDX]] * x.size()[0]))
 	decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 	target_length = y.size()[1]
 	list_y_p = model(encoder_input, decoder_input, target_length)
