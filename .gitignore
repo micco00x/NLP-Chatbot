@@ -4,3 +4,6 @@ datasets/
 models/
 patterns/
 resources/
+
+# Other
+.DS_Store
