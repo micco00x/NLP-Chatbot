@@ -1,9 +1,15 @@
 import json
+import sys
 from utils import split_words_punctuation
+
 
 # Open the Knowledge Base:
 with open("../resources/kb.json") as kb_file:
 	knowledge_base = json.load(kb_file)
+
+# Number of minimum counts to include a word
+# in the vocabulary:
+THRESHOLD = int(sys.argv[1])
 
 cnt = 0
 kb_len = len(knowledge_base)
@@ -34,7 +40,6 @@ print("\nDone.")
 
 M = 20
 m = [0] * M
-THRESHOLD = 2
 
 for key, value in words.items():
 	#print (key, value)
