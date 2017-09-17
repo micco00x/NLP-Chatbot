@@ -71,7 +71,7 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Vocabulary and Word2Vec:
-vocabulary_small = Vocabulary("../resources/vocabulary_138K.txt")
+vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
 vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
