@@ -323,7 +323,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-							2048, 2048,
+							1024, 1024,
 							word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							3, True)
