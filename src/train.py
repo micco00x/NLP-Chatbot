@@ -1,4 +1,5 @@
 import json
+import sys
 
 from BabelNetCache import *
 from utils import *
@@ -59,6 +60,13 @@ def create_buckets(bucket_list_X, bucket_list_Y, dims):
 
 	return padded_bucket_x, padded_bucket_y
 
+# HParams from json file (command line args):
+with open(sys.argv[1]) as hparams_file:
+	hparams = json.load(hparams_file)
+
+# HParams for answer generator:
+hparams_answer_generator = hparams["answerGenerator"]
+
 # Models to train:
 TRAIN_RELATION_CLASSIFIER = False
 TRAIN_CONCEPT_EXTRACTOR = False
@@ -71,8 +79,8 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Vocabulary and Word2Vec:
-vocabulary_small = Vocabulary("../resources/vocabulary_30K.txt")
-vocabulary_big = Vocabulary("../resources/vocabulary_138K.txt")
+vocabulary_small = Vocabulary(hparams_answer_generator["encoderVocabularyPath"]) # "../resources/vocabulary_30K.txt"
+vocabulary_big = Vocabulary(hparams_answer_generator["decoderVocabularyPath"]) # "../resources/vocabulary_138K.txt"
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
 print("Done.")
@@ -286,7 +294,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	Y = []
 	
 	cnt = 0
-	kb_len = len(knowledge_base)
+	kb_len = int(len(knowledge_base) * hparams_answer_generator["kbLenPercentage"])
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
 	for elem in knowledge_base:
@@ -307,7 +315,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	print("\nDone.")
 	
 	# Split training set into train, dev and test:
-	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, 0.6)
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, hparams_answer_generator["kbSplit"])
 	
 	# Create buckets:
 	buckets_dims = [10, 20, 50, max([len(y) for y in Y])]
@@ -323,24 +331,26 @@ if TRAIN_ANSWER_GENERATOR == True:
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.EOS_SYMBOL],
-							1024, 1024,
+							hparams_answer_generator["encoderHiddenSize"],
+							hparams_answer_generator["decoderHiddenSize"],
 							word2vec.EMBEDDING_DIM, emb_matrix_big, emb_matrix_small,
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
-							3, True)
+							hparams_answer_generator["nLayers"],
+							hparams_answer_generator["bidirectional"])
 	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 
 	# Train the network:
 	optimizer = torch.optim.RMSprop(seq2seq_model.parameters())
 	criterion = torch.nn.NLLLoss(ignore_index=seq2seq_model.embedding_padding_idx)
-	batch_size = 128
 	seq2seq.utils.train(seq2seq_model,
 					    optimizer,
 						criterion,
 						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=batch_size, epochs=20,
+						batch_size=hparams_answer_generator["batchSize"],
+						epochs=hparams_answer_generator["epochs"],
 						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
 						checkpoint_dir="../models",
-						early_stopping_max=3)
+						early_stopping_max=hparams_answer_generator["earlyStoppingMax"])
 
 	# Test the network:
 	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
