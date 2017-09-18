@@ -108,5 +108,6 @@ class Seq2Seq(torch.nn.Module):
 		output = self.decoder_embedding(input)
 		output = torch.nn.functional.relu(output)
 		output, hidden = self.decoder_gru(output, hidden)
-		output = self.softmax(self.decoder_out(output[:,0,:self.decoder_hidden_size]))
+		output = self.decoder_out(output[:,0,:self.decoder_hidden_size])
+		output = self.softmax(output)
 		return output, hidden
