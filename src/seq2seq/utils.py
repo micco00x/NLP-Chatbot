@@ -80,11 +80,11 @@ def train(model, optimizer, criterion,
 				# Update the parameters of the network:
 				optimizer.step()
 	
-				# Save model after 500 iterations:
-				if iter_cnt % 500 == 0 and checkpoint_dir:
+				# Save model after 1000 iterations:
+				if iter_cnt % 1000 == 0 and checkpoint_dir:
 					state = {
 						"epoch": epoch+1,
-						"iter": iter+1,
+						"iter": iter_cnt+1,
 						"state_dict": model.state_dict(),
 						"best_acc": best_acc,
 						"optimizer": optimizer.state_dict()
