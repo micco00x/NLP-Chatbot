@@ -345,11 +345,13 @@ if TRAIN_ANSWER_GENERATOR == True:
 	criterion = criterion.cuda() if torch.cuda.is_available() else criterion
 	batch_size = hparams_answer_generator["batchSize"]
 	starting_epoch = 0
+	starting_iter = 0
 	best_acc = 0
 
 	if hparams_answer_generator["checkpoint"]:
 		checkpoint = torch.load(hparams_answer_generator["checkpoint"])
 		starting_epoch = checkpoint["epoch"]
+		starting_iter = checkpoint["iter"]
 		seq2seq_model.load_state_dict(checkpoint["state_dict"])
 		best_acc = checkpoint["best_acc"]
 		optimizer.load_state_dict(checkpoint["optimizer"])
@@ -364,6 +366,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 						checkpoint_dir="../models",
 						early_stopping_max=hparams_answer_generator["earlyStoppingMax"],
 						starting_epoch=starting_epoch,
+						starting_iter=starting_iter,
 						best_acc=best_acc)
 
 	# Test the network:

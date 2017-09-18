@@ -8,6 +8,7 @@ def train(model, optimizer, criterion,
 		  checkpoint_dir=None,
 		  early_stopping_max=None,
 		  starting_epoch=0,
+		  starting_iter=0,
 		  best_acc=0):
 	
 	# Check if dev set is defined:
@@ -26,6 +27,9 @@ def train(model, optimizer, criterion,
 		print("Epoch " + str(epoch+1) + "/" + str(epochs))
 		print("----------")
 	
+		# Count number of iterations:
+		iter_cnt = 0
+	
 		# Used to compute accuracy over buckets:
 		correct_predicted_words_cnt = 0
 		words_train_cnt = 0
@@ -36,6 +40,11 @@ def train(model, optimizer, criterion,
 	
 		for X, Y in zip(bucket_list_X, bucket_list_Y):
 			for idx in range(0, len(X), batch_size):
+			
+				# Update iter_cnt:
+				if iter_cnt < starting_iter:
+					continue
+				iter_cnt += 1
 			
 				# Init tensors:
 				x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
@@ -70,6 +79,19 @@ def train(model, optimizer, criterion,
 
 				# Update the parameters of the network:
 				optimizer.step()
+	
+				# Save model after 500 iterations:
+				if iter_cnt % 500 == 0 and checkpoint_dir:
+					state = {
+						"epoch": epoch+1,
+						"iter": iter+1,
+						"state_dict": model.state_dict(),
+						"best_acc": best_acc,
+						"optimizer": optimizer.state_dict()
+					}
+					
+					filename = checkpoint_dir + "/seq2seq_epoch_" + str(epoch+1) + "_iter_" + str(iter_cnt+1) + ".pth.tar"
+					save_checkpoint(state, filename)
 
 		print("")
 
@@ -89,6 +111,7 @@ def train(model, optimizer, criterion,
 		if checkpoint_dir:
 			state = {
 				"epoch": epoch+1,
+				"iter": 0,
 				"state_dict": model.state_dict(),
 				"best_acc": best_acc,
 				"optimizer": optimizer.state_dict()
@@ -107,6 +130,9 @@ def train(model, optimizer, criterion,
 				early_stopping_cnt += 1
 			if early_stopping_max < early_stopping_cnt:
 				break
+
+		# Reset starting_iter to 0 at the end of the epoch:
+		starting_iter = 0
 
 
 # Evaluate the network on a list of buckets,
