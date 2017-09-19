@@ -161,6 +161,7 @@ def handle(msg):
 		elif user_status[chat_id].status == USER_STATUS.ASKING_QUESTION:
 			user_status[chat_id].question = msg["text"]
 			q = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
+			q.reverse() # NN uses reversed sentence
 			with graph.as_default():
 				user_status[chat_id].relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q))[0]))
 			# TODO: send correct answer using the model
