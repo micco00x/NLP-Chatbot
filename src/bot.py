@@ -27,6 +27,8 @@ from Word2Vec import *
 from seq2seq.Seq2Seq import Seq2Seq
 import seq2seq.utils
 
+import sys
+
 CHATBOT_TOKEN = "436863628:AAFHt0_YkqbjyMnoIBOltdntdRFYxd4Q-XQ"
 BABELNET_KEY = "5aa541b8-e16d-4170-8e87-868c0bff9a5e"
 
@@ -58,15 +60,17 @@ question_generator = QuestionGenerator("../babelnet/BabelDomains_full/BabelDomai
 # BabelNetCache:
 babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
 
-# Vocabularies for seq2seq encoder/decoder:
-vocabulary_encoder = Vocabulary("../resources/vocabulary_138K.txt")
-vocabulary_decoder = Vocabulary("../resources/vocabulary_30K.txt")
-vocabulary = Vocabulary("../resources/vocabulary_138K.txt")
+# HParams from json file (command line args):
+with open(sys.argv[1]) as hparams_file:
+	hparams = json.load(hparams_file)
 
-# Word2Vec:
-#print("Loading Word2Vec...")
-#word2vec = Word2Vec("../resources/Word2Vec.bin", "../resources/vocabulary.txt")
-#print("Done.")
+# HParams for answer generator:
+hparams_answer_generator = hparams["answerGenerator"]
+
+# Vocabularies for seq2seq encoder/decoder:
+vocabulary_encoder = Vocabulary(hparams_answer_generator["encoderVocabularyPath"])
+vocabulary_decoder = Vocabulary(hparams_answer_generator["decoderVocabularyPath"])
+vocabulary = Vocabulary("../resources/vocabulary_138K.txt")
 
 # Load NN models:
 print("Loading NN models...")
@@ -74,17 +78,24 @@ relation_classifier = keras.models.load_model("../models/relation_classifier.ker
 concept_extractor = keras.models.load_model("../models/concept_extractor.keras")
 graph = tf.get_default_graph()
 
-#seq2seq_model = Seq2Seq(vocabulary_encoder.VOCABULARY_DIM, vocabulary_decoder.VOCABULARY_DIM,
-#						vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL],
-#						vocabulary_decoder.word2index[vocabulary_decoder.GO_SYMBOL],
-#						vocabulary_decoder.word2index[vocabulary_decoder.EOS_SYMBOL],
-#						512, 512,
-#						300,
-#						embedding_padding_idx=vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL])
-seq2seq_model = torch.load("../models/seq2seq.pth.tar")
+seq2seq_model = Seq2Seq("eval",
+						vocabulary_encoder.VOCABULARY_DIM, vocabulary_decoder.VOCABULARY_DIM,
+						vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL],
+						vocabulary_decoder.word2index[vocabulary_decoder.GO_SYMBOL],
+						vocabulary_decoder.word2index[vocabulary_decoder.EOS_SYMBOL],
+						hparams_answer_generator["encoderHiddenSize"],
+						hparams_answer_generator["decoderHiddenSize"],
+						300, # TODO: this should be included in hparams too
+						embedding_padding_idx=vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL])
+# TODO: loading on GPU with CUDA shouldn't create any problem
+state_dict = torch.load(hparams_answer_generator["checkpoint"], map_location=lambda storage, loc:storage)["state_dict"]
+from collections import OrderedDict
+new_state_dict = OrderedDict()
+for k, v in state_dict.items():
+	if not k.endswith("l1"):
+		new_state_dict[k] = v
+seq2seq_model.load_state_dict(new_state_dict)
 seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
-seq2seq_model.mode = "eval"
-#seq2seq.utils.load(seq2seq_model, "../models/seq2seq.pth.tar")
 
 print("Done.")
 
@@ -130,7 +141,7 @@ def handle(msg):
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
 			print("Recognizing domain:", msg["text"], "->", recognized_domain)
 			user_status[chat_id].domain = recognized_domain
-			if random.uniform(0, 1) < 0.0: # 0.5
+			if random.uniform(0, 1) < 1.0: # 0.5
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
 				user_status[chat_id].status = USER_STATUS.ASKING_QUESTION
 			else:
@@ -149,7 +160,7 @@ def handle(msg):
 				user_status[chat_id].status = USER_STATUS.ANSWERING_QUESTION
 		elif user_status[chat_id].status == USER_STATUS.ASKING_QUESTION:
 			user_status[chat_id].question = msg["text"]
-			q = vocabulary.sentence2indices(user_status[chat_id].question)
+			q = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
 			with graph.as_default():
 				user_status[chat_id].relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q))[0]))
 			# TODO: send correct answer using the model
@@ -159,7 +170,7 @@ def handle(msg):
 				encoder_input = encoder_input.cuda()
 				decoder_input = decoder_input.cuda()
 			answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
-			answer = " ".join([vocabulary.index2word[w_idx] for w_idx in answer_idx[:-1]])
+			answer = " ".join([vocabulary_decoder.index2word[w_idx] for w_idx in answer_idx[:-1]])
 			bot.sendMessage(chat_id, answer + " The relation is " + user_status[chat_id].relation)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
