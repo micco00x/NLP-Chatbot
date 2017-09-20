@@ -9,11 +9,11 @@ import random
 from utils import *
 
 class QuestionGenerator:
-	def __init__(self, babeldomains_file_path, domains_to_relations_file_path, patterns_file_path):
+	def __init__(self, babeldomains_file_path, domains_to_relations_file_path, questionPatterns):
 		
 		self.domain_to_concepts = {}
 		self.domain_to_relations = {}
-		self.relation_to_questions = {}
+		self.questionPatterns = questionPatterns
 		
 		# Open concept to domain file:
 		with open(babeldomains_file_path) as babeldomains_file:
@@ -38,28 +38,15 @@ class QuestionGenerator:
 				l = l.rstrip("\n").split("\t")
 				self.domain_to_relations[l[0]] = l[1:]
 
-		# Open patterns file:
-		with open(patterns_file_path) as patterns_file:
-			for l in patterns_file:
-				l = l.rstrip("\n").split("\t")
-				
-				if l[1] not in self.relation_to_questions:
-					self.relation_to_questions[l[1]] = []
-				
-				self.relation_to_questions[l[1]].append(l[0])
-
 	# Generate a random question given a domain:
 	def generate(self, domain, babelNetCache=None):
 		question_data = {}
 		
 		id1 = random.choice(self.domain_to_concepts[domain])
-		#question_data["id1"] = id1
-		
-		# TO TEST: add babelnetcache here (speeds up question generation)
 		w1 = babelNetIdToLemma(id1, babelNetCache)
 		
 		relation = random.choice(self.domain_to_relations[domain])
-		question = random.choice(self.relation_to_questions[relation])
+		question = random.choice(self.questionPatterns[relation])
 
 		if "X" in question and "Y" in question:
 			question_data["id1"] = id1
