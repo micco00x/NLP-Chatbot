@@ -1,12 +1,5 @@
-import urllib.request
-import json
-import gzip
-
-from io import BytesIO
-
 import random
-
-from utils import *
+import utils
 
 class QuestionGenerator:
 	def __init__(self, babeldomains_file_path, domains_to_relations_file_path, questionPatterns):
@@ -43,7 +36,7 @@ class QuestionGenerator:
 		question_data = {}
 		
 		id1 = random.choice(self.domain_to_concepts[domain])
-		w1 = babelNetIdToLemma(id1, babelNetCache)
+		w1 = utils.babelNetIdToLemma(id1, babelNetCache)
 		
 		relation = random.choice(self.domain_to_relations[domain])
 		question = random.choice(self.questionPatterns[relation])
