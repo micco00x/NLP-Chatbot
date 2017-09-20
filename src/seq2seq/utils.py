@@ -56,11 +56,7 @@ def train(model, optimizer, criterion,
 				
 				optimizer.zero_grad()
 
-				#target_length = y.size()[1]
 				sentences_train_cnt += x.size()[0]
-
-				#encoder_outputs = torch.autograd.Variable(torch.zeros(self.target_max_length, self.encoder.hidden_size))
-				#encoder_outputs = encoder_outputs.cuda() if torch.cuda.is_available() else encoder_outputs
 
 				loss, correct_predicted_words_c, words_train_c = _compute_loss(model, criterion, x, y)
 				tot_loss += loss.data[0]

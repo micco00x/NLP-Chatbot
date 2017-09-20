@@ -8,15 +8,6 @@ import random
 
 from utils import *
 
-# Open the Knowledge Base:
-#with open("../knowledge_base/kb.json") as kb_file:
-#	knowledge_base = json.load(kb_file)
-
-#for elem in knowledge_base:
-#	if len(elem["domains"]) != 0:
-#		if elem["domains"][0] != "":
-#			print(elem["domains"])
-
 class QuestionGenerator:
 	def __init__(self, babeldomains_file_path, domains_to_relations_file_path, patterns_file_path):
 		
@@ -101,25 +92,3 @@ class QuestionGenerator:
 		question_data["question"] = question
 
 		return question_data
-
-#domains = []
-
-# Open domains file:
-#with open("../babelnet/BabelDomains_full/domain_list.txt") as domain_list_file:
-#	for l in domain_list_file:
-#		domains.append(l.rstrip("\n"))
-
-#question_generator = QuestionGenerator("../babelnet/BabelDomains_full/BabelDomains/babeldomains_babelnet.txt",
-#									   "../resources/domains_to_relations.tsv",
-#									   "../resources/patterns.tsv")
-
-#chosen = False
-#while not chosen:
-#	try:
-#		question_data = question_generator.generate(random.choice(domains))
-#		chosen = True
-#	except:
-#		pass
-
-#print(question_data)
-

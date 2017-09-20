@@ -375,5 +375,5 @@ if TRAIN_ANSWER_GENERATOR == True:
 						best_acc=best_acc)
 
 	# Test the network:
-#	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
-#	print("Test Loss: %2.3f | Test Accuracy: %2.3f%%" % (test_loss, test_accuracy*100))
+	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
+	print("Test Loss: %2.3f | Test Accuracy: %2.3f%%" % (test_loss, test_accuracy*100))
