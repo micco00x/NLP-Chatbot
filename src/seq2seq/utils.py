@@ -68,6 +68,9 @@ def train(model, optimizer, criterion,
 				words_train_cnt += words_train_c
 
 				# Print current status of training:
+				# TODO: if you start from the middle of an epoch the iter value
+				#		is wrong because it considers sentences_train_cnt and not
+				#		iter_cnt
 				training_loss = tot_loss / sentences_train_cnt
 				training_accuracy = correct_predicted_words_cnt / words_train_cnt
 				print("Iter: %2.3f%% | Training Loss: %2.3f | Training Accuracy: %2.3f%%" %
@@ -95,15 +98,20 @@ def train(model, optimizer, criterion,
 
 		print("")
 
+		# NOTE: if the model is too big loss and accuracy on dev set won't
+		#		be computed because the memory of the GPU wouldn't be
+		#		enough, during testing this part had been commented to
+		#		guarantee the end of the training phase.
+
 		# Compute loss and accuracy on dev set:
-#		if validation_data:
-#			validation_loss, validation_accuracy = evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
-#			print("Validation Loss: %2.3f | Validation Accuracy: %2.3f%%" % (validation_loss, validation_accuracy*100))
-#			is_best = best_acc < validation_accuracy
-#			best_acc = max(best_acc, validation_accuracy)
-#		else:
-#			is_best = best_acc < training_accuracy
-#			best_acc = max(best_acc, training_accuracy)
+		if validation_data:
+			validation_loss, validation_accuracy = evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
+			print("Validation Loss: %2.3f | Validation Accuracy: %2.3f%%" % (validation_loss, validation_accuracy*100))
+			is_best = best_acc < validation_accuracy
+			best_acc = max(best_acc, validation_accuracy)
+		else:
+			is_best = best_acc < training_accuracy
+			best_acc = max(best_acc, training_accuracy)
 
 		print("")
 
@@ -119,17 +127,17 @@ def train(model, optimizer, criterion,
 			
 			filename = checkpoint_dir + "/seq2seq_epoch_" + str(epoch+1) + ".pth.tar"
 			save_checkpoint(state, filename)
-#			if is_best:
-#				shutil.copyfile(filename, checkpoint_dir + "/seq2seq_best.pth.tar")
+			if is_best:
+				shutil.copyfile(filename, checkpoint_dir + "/seq2seq_best.pth.tar")
 
 		# Early stopping:
-#		if early_stopping_max:
-#			if is_best:
-#				early_stopping_cnt = 0
-#			else:
-#				early_stopping_cnt += 1
-#			if early_stopping_max < early_stopping_cnt:
-#				break
+		if early_stopping_max:
+			if is_best:
+				early_stopping_cnt = 0
+			else:
+				early_stopping_cnt += 1
+			if early_stopping_max < early_stopping_cnt:
+				break
 
 		# Reset starting_iter to 0 at the end of the epoch:
 		starting_iter = 0

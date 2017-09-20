@@ -21,6 +21,10 @@ class Seq2Seq(torch.nn.Module):
 		
 		super(Seq2Seq, self).__init__()
 		
+		# TODO: with mode="eval" there's no need to take values of gradients
+		#		of gradients of the graph since a backward operations is never
+		#		performed, you can use this to save RAM
+		
 		# hparams:
 		self.mode = mode
 		self.target_vocabulary_dim = target_vocabulary_dim
