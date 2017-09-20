@@ -42,9 +42,9 @@ def train(model, optimizer, criterion,
 			for idx in range(0, len(X), batch_size):
 			
 				# Update iter_cnt:
+				iter_cnt += 1
 				if iter_cnt < starting_iter:
 					continue
-				iter_cnt += 1
 			
 				# Init tensors:
 				x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
@@ -96,14 +96,14 @@ def train(model, optimizer, criterion,
 		print("")
 
 		# Compute loss and accuracy on dev set:
-		if validation_data:
-			validation_loss, validation_accuracy = evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
-			print("Validation Loss: %2.3f | Validation Accuracy: %2.3f%%" % (validation_loss, validation_accuracy*100))
-			is_best = best_acc < validation_accuracy
-			best_acc = max(best_acc, validation_accuracy)
-		else:
-			is_best = best_acc < training_accuracy
-			best_acc = max(best_acc, training_accuracy)
+#		if validation_data:
+#			validation_loss, validation_accuracy = evaluate(model, criterion, dev_bucket_list_X, dev_bucket_list_Y, batch_size)
+#			print("Validation Loss: %2.3f | Validation Accuracy: %2.3f%%" % (validation_loss, validation_accuracy*100))
+#			is_best = best_acc < validation_accuracy
+#			best_acc = max(best_acc, validation_accuracy)
+#		else:
+#			is_best = best_acc < training_accuracy
+#			best_acc = max(best_acc, training_accuracy)
 
 		print("")
 
@@ -119,17 +119,17 @@ def train(model, optimizer, criterion,
 			
 			filename = checkpoint_dir + "/seq2seq_epoch_" + str(epoch+1) + ".pth.tar"
 			save_checkpoint(state, filename)
-			if is_best:
-				shutil.copyfile(filename, checkpoint_dir + "/seq2seq_best.pth.tar")
+#			if is_best:
+#				shutil.copyfile(filename, checkpoint_dir + "/seq2seq_best.pth.tar")
 
 		# Early stopping:
-		if early_stopping_max:
-			if is_best:
-				early_stopping_cnt = 0
-			else:
-				early_stopping_cnt += 1
-			if early_stopping_max < early_stopping_cnt:
-				break
+#		if early_stopping_max:
+#			if is_best:
+#				early_stopping_cnt = 0
+#			else:
+#				early_stopping_cnt += 1
+#			if early_stopping_max < early_stopping_cnt:
+#				break
 
 		# Reset starting_iter to 0 at the end of the epoch:
 		starting_iter = 0

@@ -66,11 +66,14 @@ with open(sys.argv[1]) as hparams_file:
 
 # HParams for answer generator:
 hparams_answer_generator = hparams["answerGenerator"]
+hparams_relation_classifier = hparams["relationClassifier"]
+hparams_concept_extractor = hparams["conceptExtractor"]
 
 # Vocabularies for seq2seq encoder/decoder:
 vocabulary_encoder = Vocabulary(hparams_answer_generator["encoderVocabularyPath"])
 vocabulary_decoder = Vocabulary(hparams_answer_generator["decoderVocabularyPath"])
-vocabulary = Vocabulary("../resources/vocabulary_138K.txt")
+relation_classifier_vocabulary = Vocabulary(hparams_relation_classifier["vocabularyPath"])
+concept_extractor_vocabulary = Vocabulary(hparams_concept_extractor["vocabularyPath"])
 
 # Load NN models:
 print("Loading NN models...")
@@ -160,12 +163,13 @@ def handle(msg):
 				user_status[chat_id].status = USER_STATUS.ANSWERING_QUESTION
 		elif user_status[chat_id].status == USER_STATUS.ASKING_QUESTION:
 			user_status[chat_id].question = msg["text"]
-			q = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
-			q.reverse() # NN uses reversed sentence
+			q_qaNN = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
+			q_qaNN.reverse() # Q&A NN uses reversed sentence
+			q_rcNN = relation_classifier_vocabulary.sentence2indices(user_status[chat_id].question)
 			with graph.as_default():
-				user_status[chat_id].relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q))[0]))
+				user_status[chat_id].relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q_rcNN))[0]))
 			# TODO: send correct answer using the model
-			encoder_input = torch.autograd.Variable(torch.LongTensor([q]))
+			encoder_input = torch.autograd.Variable(torch.LongTensor([q_qaNN]))
 			decoder_input = torch.autograd.Variable(torch.LongTensor([[seq2seq_model.GO_SYMBOL_IDX]]))
 			if torch.cuda.is_available():
 				encoder_input = encoder_input.cuda()
@@ -188,7 +192,7 @@ def handle(msg):
 			elif user_status[chat_id].question_data["type"] == "X":
 				c1 = user_status[chat_id].question_data["id1"]
 				with graph.as_default():
-					c2_probability_concept = concept_extractor.predict(np.array(vocabulary.sentence2indices(answer)))
+					c2_probability_concept = concept_extractor.predict(np.array(concept_extractor_vocabulary.sentence2indices(answer)))
 				print(c2_probability_concept)
 				c2_tokens = probabilities_to_concept_tokens(c2_probability_concept)
 				print("c2_tokens:", c2_tokens)
@@ -207,7 +211,7 @@ def handle(msg):
 			else:
 				c2 = user_status[chat_id].question_data["id2"]
 				with graph.as_default():
-					c1_probability_concept = concept_extractor.predict(np.array(vocabulary.sentence2indices(answer)))
+					c1_probability_concept = concept_extractor.predict(np.array(concept_extractor_vocabulary.sentence2indices(answer)))
 				print(c1_probability_concept)
 				c1_tokens = probabilities_to_concept_tokens(c1_probability_concept)
 				print("c1_tokens:", c1_tokens)

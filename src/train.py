@@ -66,11 +66,13 @@ with open(sys.argv[1]) as hparams_file:
 
 # HParams for answer generator:
 hparams_answer_generator = hparams["answerGenerator"]
+hparams_relation_classifier = hparams["relationClassifier"]
+hparams_concept_extractor = hparams["conceptExtractor"]
 
 # Models to train:
-TRAIN_RELATION_CLASSIFIER = False
-TRAIN_CONCEPT_EXTRACTOR = False
-TRAIN_ANSWER_GENERATOR = True
+TRAIN_RELATION_CLASSIFIER = True
+TRAIN_CONCEPT_EXTRACTOR = True
+TRAIN_ANSWER_GENERATOR = False
 
 # Open the Knowledge Base:
 print("Loading the knowledge base...")
@@ -78,9 +80,12 @@ with open("../resources/kb.json") as kb_file:
 	knowledge_base = json.load(kb_file)
 print("Done.")
 
-# Vocabulary and Word2Vec:
-vocabulary_small = Vocabulary(hparams_answer_generator["encoderVocabularyPath"]) # "../resources/vocabulary_30K.txt"
-vocabulary_big = Vocabulary(hparams_answer_generator["decoderVocabularyPath"]) # "../resources/vocabulary_138K.txt"
+# Vocabularies and Word2Vec:
+vocabulary_small = Vocabulary(hparams_answer_generator["encoderVocabularyPath"])
+vocabulary_big = Vocabulary(hparams_answer_generator["decoderVocabularyPath"])
+relation_classifier_vocabulary = Vocabulary(hparams_relation_classifier["vocabularyPath"])
+concept_extractor_vocabulary = Vocabulary(hparams_concept_extractor["vocabularyPath"])
+
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
 print("Done.")
@@ -94,7 +99,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	Y = []
 
 	cnt = 0
-	kb_len = len(knowledge_base)
+	kb_len = int(len(knowledge_base) * hparams_relation_classifier["kbLenPercentage"])
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 
 	# Build X and Y:
@@ -103,7 +108,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 
-		X.append(vocabulary_big.sentence2indices(elem["question"]))
+		X.append(relation_classifier_vocabulary.sentence2indices(elem["question"]))
 		Y.append(relation_to_int(elem["relation"]))
 
 	print("\nDone.")
@@ -116,16 +121,16 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	X = keras.preprocessing.sequence.pad_sequences(sequences=X, maxlen=longest_sentence_length)
 
 	# Split training set into train, dev and test:
-	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, 0.6)
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, hparams_relation_classifier["kbSplit"])
 
 	# Define the network:
 	relation_classifier = Sequential()
-	relation_classifier.add(Embedding(input_dim=vocabulary_big.VOCABULARY_DIM,
+	relation_classifier.add(Embedding(input_dim=relation_classifier_vocabulary.VOCABULARY_DIM,
 									  output_dim=word2vec.EMBEDDING_DIM,
-									  weights=[word2vec.createEmbeddingMatrix(vocabulary_big)],
+									  weights=[word2vec.createEmbeddingMatrix(relation_classifier_vocabulary)],
 									  trainable=True,
 									  mask_zero=True))
-	relation_classifier.add(LSTM(units=200, return_sequences=False))
+	relation_classifier.add(LSTM(units=hparams_relation_classifier["hiddenSize"], return_sequences=False))
 	relation_classifier.add(Dense(16))
 	relation_classifier.add(Activation("softmax"))
 
@@ -137,8 +142,8 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	# Train the network:
 	relation_classifier.fit(X_train, Y_train,
 							validation_data=(X_dev, Y_dev),
-							batch_size=128,
-							epochs=5)
+							batch_size=hparams_relation_classifier["batchSize"],
+							epochs=hparams_relation_classifier["epochs"])
 
 	# Results of the network on the test set:
 	loss_and_metrics = relation_classifier.evaluate(X_test, Y_test)
@@ -158,7 +163,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 	Y = []
 
 	cnt = 0
-	kb_len = len(knowledge_base)
+	kb_len = int(len(knowledge_base) * hparams_concept_extractor["kbLenPercentage"])
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
 	for elem in knowledge_base:
@@ -216,7 +221,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 			continue
 
 		# Create data for the NN:
-		x = vocabulary_big.sentence2indices(answer)
+		x = concept_extractor_vocabulary.sentence2indices(answer)
 		y = [[0, 0, 0, 1] for _ in range(len(x))]
 
 		if i1 == -1 or i2 == -1:
@@ -255,16 +260,16 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 	Y = keras.preprocessing.sequence.pad_sequences(sequences=Y, maxlen=longest_sentence_length)
 
 	# Split training set into train, dev and test:
-	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, 0.6)
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, hparams_concept_extractor["kbSplit"])
 
 	# Define the network:
 	concept_extractor = Sequential()
-	concept_extractor.add(Embedding(input_dim=vocabulary_big.VOCABULARY_DIM,
+	concept_extractor.add(Embedding(input_dim=concept_extractor_vocabulary.VOCABULARY_DIM,
 									output_dim=word2vec.EMBEDDING_DIM,
-									weights=[word2vec.createEmbeddingMatrix(vocabulary_big)],
+									weights=[word2vec.createEmbeddingMatrix(concept_extractor_vocabulary)],
 									trainable=True,
 									mask_zero=True))
-	concept_extractor.add(LSTM(units=200, return_sequences=True))
+	concept_extractor.add(LSTM(units=hparams_concept_extractor["hiddenSize"], return_sequences=True))
 	concept_extractor.add(Dense(4))
 	concept_extractor.add(Activation("softmax"))
 
@@ -276,8 +281,8 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 	# Train the network:
 	concept_extractor.fit(X_train, Y_train,
 						  validation_data=(X_dev, Y_dev),
-						  batch_size=128,
-						  epochs=5)
+						  batch_size=hparams_concept_extractor["batchSize"],
+						  epochs=hparams_concept_extractor["epochs"])
 
 	# Results of the network on the test set:
 	loss_and_metrics = concept_extractor.evaluate(X_test, Y_test)
@@ -370,5 +375,5 @@ if TRAIN_ANSWER_GENERATOR == True:
 						best_acc=best_acc)
 
 	# Test the network:
-	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
-	print("Test Loss: %2.3f | Test Accuracy: %2.3f%%" % (test_loss, test_accuracy*100))
+#	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
+#	print("Test Loss: %2.3f | Test Accuracy: %2.3f%%" % (test_loss, test_accuracy*100))
