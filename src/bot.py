@@ -187,6 +187,7 @@ def handle(msg):
 					decoder_input = decoder_input.cuda()
 				answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
 				answer = " ".join([vocabulary_decoder.index2word[w_idx] for w_idx in answer_idx[:-1]])
+				if answer = "": answer = "I don't understand." # NN could return an empty sequence
 			else:
 				answer = answerGenerator.generate(msg["text"], babelNetCache, graph)
 			bot.sendMessage(chat_id, answer)
