@@ -105,6 +105,8 @@ class AnswerGenerator:
 				
 				conceptX = question[conceptX_begin_idx:conceptX_end_idx].lower()
 				conceptY = question[conceptY_begin_idx:conceptY_end_idx].lower()
+				print("conceptX:", conceptX)
+				print("conceptY:", conceptY)
 			
 			# Only X in the question:
 			elif Ypos == -1:
@@ -127,6 +129,7 @@ class AnswerGenerator:
 					continue
 				
 				conceptX = question[concept_begin_idx:concept_end_idx].lower()
+				print("conceptX:", conceptX)
 
 			# Only Y in the question:
 			elif Xpos == -1:
@@ -149,6 +152,7 @@ class AnswerGenerator:
 					continue
 					
 				conceptY = question[concept_begin_idx:concept_end_idx].lower()
+				print("conceptY:", conceptY)
 				
 			for elem in self.knowledge_base:
 				if elem["relation"] == relation:
@@ -167,7 +171,7 @@ class AnswerGenerator:
 								matchX = True
 						elif "bn:" in c1:
 							try:
-								if babelNetCache.cache[c1[c1.index("bn:"):]].lower() == conceptX:
+								if conceptX in babelNetCache.cache[c1[c1.index("bn:"):]].lower():
 									matchX = True
 							except:
 								pass
@@ -186,7 +190,7 @@ class AnswerGenerator:
 								matchY = True
 						elif "bn:" in c2:
 							try:
-								if babelNetCache.cache[c2[c2.index("bn:"):]].lower() == conceptY:
+								if conceptY in babelNetCache.cache[c2[c2.index("bn:"):]].lower():
 									matchY = True
 							except:
 								pass
