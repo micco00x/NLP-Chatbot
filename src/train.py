@@ -67,12 +67,14 @@ with open(sys.argv[1]) as hparams_file:
 # HParams for answer generator:
 hparams_answer_generator = hparams["answerGenerator"]
 hparams_relation_classifier = hparams["relationClassifier"]
-hparams_concept_extractor = hparams["conceptExtractor"]
+hparams_concept_extractor_question = hparams["conceptExtractorQuestion"]
+hparams_concept_extractor_answer = hparams["conceptExtractorAnswer"]
 
 # Models to train:
 TRAIN_RELATION_CLASSIFIER = False
-TRAIN_CONCEPT_EXTRACTOR = False
-TRAIN_ANSWER_GENERATOR = True
+TRAIN_CONCEPT_EXTRACTOR_QUESTION = True
+TRAIN_CONCEPT_EXTRACTOR_ANSWER = True
+TRAIN_ANSWER_GENERATOR = False
 
 # Open the Knowledge Base:
 print("Loading the knowledge base...")
@@ -84,11 +86,15 @@ print("Done.")
 vocabulary_small = Vocabulary(hparams_answer_generator["encoderVocabularyPath"])
 vocabulary_big = Vocabulary(hparams_answer_generator["decoderVocabularyPath"])
 relation_classifier_vocabulary = Vocabulary(hparams_relation_classifier["vocabularyPath"])
-concept_extractor_vocabulary = Vocabulary(hparams_concept_extractor["vocabularyPath"])
+concept_extractor_question_vocabulary = Vocabulary(hparams_concept_extractor_question["vocabularyPath"])
+concept_extractor_answer_vocabulary = Vocabulary(hparams_concept_extractor_answer["vocabularyPath"])
 
 print("Loading Word2Vec...")
 word2vec = Word2Vec("../resources/Word2Vec.bin")
 print("Done.")
+
+# BabelNet Cache:
+babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
 
 ##### RELATION CLASSIFIER #####
 if TRAIN_RELATION_CLASSIFIER == True:
@@ -103,7 +109,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 
 	# Build X and Y:
-	for elem in knowledge_base: # TODO: TRAIN ON FIRST N ELEMENTS OF THE KB (CPU IS SLOW)
+	for elem in knowledge_base[:kb_len]:
 
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
@@ -130,7 +136,7 @@ if TRAIN_RELATION_CLASSIFIER == True:
 									  weights=[word2vec.createEmbeddingMatrix(relation_classifier_vocabulary)],
 									  trainable=True,
 									  mask_zero=True))
-	relation_classifier.add(LSTM(units=hparams_relation_classifier["hiddenSize"], return_sequences=False))
+	relation_classifier.add(Bidirectional(LSTM(units=hparams_relation_classifier["hiddenSize"], return_sequences=False)))
 	relation_classifier.add(Dense(16))
 	relation_classifier.add(Activation("softmax"))
 
@@ -153,25 +159,185 @@ if TRAIN_RELATION_CLASSIFIER == True:
 	# Save the network:
 	relation_classifier.save("../models/relation_classifier.keras")
 
-##### CONCEPT EXTRACTOR #####
-if TRAIN_CONCEPT_EXTRACTOR == True:
-	print("Training concept extractor")
-	
-	babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
+##### CONCEPT EXTRACTOR QUESTION ######
+if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
+	print("Training concept extractor for questions")
 
 	X = []
 	Y = []
 
 	cnt = 0
-	kb_len = int(len(knowledge_base) * hparams_concept_extractor["kbLenPercentage"])
+	kb_len = int(len(knowledge_base) * hparams_concept_extractor_question["kbLenPercentage"])
+	print("Reading the knowledge base (" + str(kb_len) + " elements)")
+
+	for elem in knowledge_base[:kb_len]:
+
+		cnt += 1
+		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
+
+		question = elem["question"].lower().strip().rstrip()
+		c1 = elem["c1"].lower().strip().rstrip()
+		c2 = elem["c2"].lower().strip().rstrip()
+
+		c1_i1 = 0
+		c1_i2 = 0
+		c2_i1 = 0
+		c2_i2 = 0
+
+		# Concepts malformed:
+		if c1.count("bn:") >= 2 or c2.count("bn:") >= 2:
+			continue
+
+		# Get indices of c1:
+		if "::bn:" in c1: # case "w::bn:--n"
+			idx = c1.index("::bn:")
+			w = c1[:idx].strip().rstrip()
+
+			question_split = split_words_punctuation(question)
+			w_split = split_words_punctuation(w)
+
+			c1_i1 = find_pattern(question_split, w_split)
+			c1_i2 = c1_i1 + len(w_split) - 1
+		elif "bn:" in c1: # case "w::bn:--n"
+			try:
+				w = babelNetIdToLemma(c1[c1.index("bn:"):], babelNetCache)
+
+				question_split = split_words_punctuation(question)
+				w_split = split_words_punctuation(w)
+
+				c1_i1 = find_pattern(question_split, w_split)
+				c1_i2 = c1_i1 + len(w_split) - 1
+			except:
+				pass
+		elif c1 in question: # case "w"
+			question_split = split_words_punctuation(question)
+			w_split = split_words_punctuation(w)
+
+			c1_i1 = find_pattern(question_split, w_split)
+			c1_i2 = c1_i1 + len(w_split) - 1
+
+		if c1_i1 == -1 or c1_i2 == -1:
+			continue
+
+		# Get indices of c2:
+		if "::bn:" in c2: # case "w::bn:--n"
+			idx = c2.index("::bn:")
+			w = c2[:idx].strip().rstrip()
+
+			question_split = split_words_punctuation(question)
+			w_split = split_words_punctuation(w)
+
+			c2_i1 = find_pattern(question_split, w_split)
+			c2_i2 = c2_i1 + len(w_split) - 1
+		elif "bn:" in c2: # case "bn:--n"
+			try:
+				w = babelNetIdToLemma(c2[c2.index("bn:"):], babelNetCache)
+
+				question_split = split_words_punctuation(question)
+				w_split = split_words_punctuation(w)
+
+				c2_i1 = find_pattern(question_split, w_split)
+				c2_i2 = c2_i1 + len(w_split) - 1
+			except:
+				pass
+		elif c2 in question: # case "w"
+			question_split = split_words_punctuation(question)
+			w_split = split_words_punctuation(w)
+
+			c2_i1 = find_pattern(question_split, w_split)
+			c2_i2 = c2_i1 + len(w_split) - 1
+
+		if c2_i1 == -1 or c2_i2 == -1:
+			continue
+
+		# Create data for the NN:
+		x = concept_extractor_question_vocabulary.sentence2indices(question)
+		y = [[0, 0, 0, 1] for _ in range(len(x))]
+
+		# The KB could be malformed, validate c1(2)_i2
+		c1_i2 = min(c2_i2, len(x)-1)
+		c2_i2 = min(c2_i2, len(x)-1)
+
+		# Begin and end of the concept,
+		# activation is (Begin+End, Begin (but not End), End (but not Begin), Other (not Begin nor End)):
+
+		if c1_i1 == c1_i2:
+			y[c1_i1] = [1, 0, 0, 0]
+		else:
+			y[c1_i1] = [0, 1, 0, 0]
+			y[c1_i2] = [0, 0, 1, 0]
+
+		if c2_i1 == c2_i2:
+			y[c2_i1] = [1, 0, 0, 0]
+		else:
+			y[c2_i1] = [0, 1, 0, 0]
+			y[c2_i2] = [0, 0, 1, 0]
+
+		#print("x:", x)
+		#print("y:", y)
+
+		X.append(x)
+		Y.append(y)
+
+	print("\nDone.")
+
+	# Save the cache with the new elements found from the queries:
+	babelNetCache.save()
+
+	# Add padding to X and Y:
+	longest_sentence_length = max([len(sentence) for sentence in X])
+	X = keras.preprocessing.sequence.pad_sequences(sequences=X, maxlen=longest_sentence_length)
+	Y = keras.preprocessing.sequence.pad_sequences(sequences=Y, maxlen=longest_sentence_length)
+
+	# Split training set into train, dev and test:
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, hparams_concept_extractor_question["kbSplit"])
+
+	# Define the network:
+	concept_extractor_question = Sequential()
+	concept_extractor_question.add(Embedding(input_dim=concept_extractor_question_vocabulary.VOCABULARY_DIM,
+											 output_dim=word2vec.EMBEDDING_DIM,
+											 weights=[word2vec.createEmbeddingMatrix(concept_extractor_question_vocabulary)],
+											 trainable=True,
+											 mask_zero=True))
+	concept_extractor_question.add(Bidirectional(LSTM(units=hparams_concept_extractor_question["hiddenSize"], return_sequences=True)))
+	concept_extractor_question.add(Dense(4))
+	concept_extractor_question.add(Activation("softmax"))
+
+	# Compile the network:
+	concept_extractor_question.compile(loss="categorical_crossentropy",
+									   optimizer=RMSprop(lr=0.01),
+									   metrics=["accuracy"])
+	
+	# Train the network:
+	concept_extractor_question.fit(X_train, Y_train,
+								   validation_data=(X_dev, Y_dev),
+								   batch_size=hparams_concept_extractor_question["batchSize"],
+								   epochs=hparams_concept_extractor_question["epochs"])
+
+	# Results of the network on the test set:
+	loss_and_metrics = concept_extractor_question.evaluate(X_test, Y_test)
+	print(concept_extractor_question.metrics_names[0] + ": " + str(loss_and_metrics[0]))
+	print(concept_extractor_question.metrics_names[1] + ": " + str(loss_and_metrics[1]))
+	
+	# Save the network:
+	concept_extractor_question.save("../models/concept_extractor_question.keras")
+
+##### CONCEPT EXTRACTOR ANSWER #####
+if TRAIN_CONCEPT_EXTRACTOR_ANSWER == True:
+	print("Training concept extractor for answers")
+
+	X = []
+	Y = []
+
+	cnt = 0
+	kb_len = int(len(knowledge_base) * hparams_concept_extractor_answer["kbLenPercentage"])
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
 	
-	for elem in knowledge_base:
+	for elem in knowledge_base[:kb_len]:
 		
 		cnt += 1
 		print("Progress: {:2.1%}".format(cnt / kb_len), end="\r")
 		
-		question = elem["question"].strip().rstrip()
 		answer = elem["answer"].strip().rstrip()
 		c2 = elem["c2"].strip().rstrip()
 		#print("Q:", question)
@@ -221,7 +387,7 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 			continue
 
 		# Create data for the NN:
-		x = concept_extractor_vocabulary.sentence2indices(answer)
+		x = concept_extractor_answer_vocabulary.sentence2indices(answer)
 		y = [[0, 0, 0, 1] for _ in range(len(x))]
 
 		if i1 == -1 or i2 == -1:
@@ -260,37 +426,37 @@ if TRAIN_CONCEPT_EXTRACTOR == True:
 	Y = keras.preprocessing.sequence.pad_sequences(sequences=Y, maxlen=longest_sentence_length)
 
 	# Split training set into train, dev and test:
-	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, hparams_concept_extractor["kbSplit"])
+	X_train, Y_train, X_dev, Y_dev, X_test, Y_test = split_dataset(X, Y, hparams_concept_extractor_answer["kbSplit"])
 
 	# Define the network:
-	concept_extractor = Sequential()
-	concept_extractor.add(Embedding(input_dim=concept_extractor_vocabulary.VOCABULARY_DIM,
-									output_dim=word2vec.EMBEDDING_DIM,
-									weights=[word2vec.createEmbeddingMatrix(concept_extractor_vocabulary)],
-									trainable=True,
-									mask_zero=True))
-	concept_extractor.add(LSTM(units=hparams_concept_extractor["hiddenSize"], return_sequences=True))
-	concept_extractor.add(Dense(4))
-	concept_extractor.add(Activation("softmax"))
+	concept_extractor_answer = Sequential()
+	concept_extractor_answer.add(Embedding(input_dim=concept_extractor_answer_vocabulary.VOCABULARY_DIM,
+										   output_dim=word2vec.EMBEDDING_DIM,
+										   weights=[word2vec.createEmbeddingMatrix(concept_extractor_answer_vocabulary)],
+										   trainable=True,
+										   mask_zero=True))
+	concept_extractor_answer.add(Bidirectional(LSTM(units=hparams_concept_extractor_answer["hiddenSize"], return_sequences=True)))
+	concept_extractor_answer.add(Dense(4))
+	concept_extractor_answer.add(Activation("softmax"))
 
 	# Compile the network:
-	concept_extractor.compile(loss="categorical_crossentropy",
-							  optimizer=RMSprop(lr=0.01),
-							  metrics=["accuracy"])
+	concept_extractor_answer.compile(loss="categorical_crossentropy",
+									 optimizer=RMSprop(lr=0.01),
+									 metrics=["accuracy"])
 	
 	# Train the network:
-	concept_extractor.fit(X_train, Y_train,
-						  validation_data=(X_dev, Y_dev),
-						  batch_size=hparams_concept_extractor["batchSize"],
-						  epochs=hparams_concept_extractor["epochs"])
+	concept_extractor_answer.fit(X_train, Y_train,
+								 validation_data=(X_dev, Y_dev),
+								 batch_size=hparams_concept_extractor_answer["batchSize"],
+								 epochs=hparams_concept_extractor_answer["epochs"])
 
 	# Results of the network on the test set:
-	loss_and_metrics = concept_extractor.evaluate(X_test, Y_test)
-	print(concept_extractor.metrics_names[0] + ": " + str(loss_and_metrics[0]))
-	print(concept_extractor.metrics_names[1] + ": " + str(loss_and_metrics[1]))
+	loss_and_metrics = concept_extractor_answer.evaluate(X_test, Y_test)
+	print(concept_extractor_answer.metrics_names[0] + ": " + str(loss_and_metrics[0]))
+	print(concept_extractor_answer.metrics_names[1] + ": " + str(loss_and_metrics[1]))
 	
 	# Save the network:
-	concept_extractor.save("../models/concept_extractor.keras")
+	concept_extractor_answer.save("../models/concept_extractor_answer.keras")
 
 if TRAIN_ANSWER_GENERATOR == True:
 	print("Training answer generator")
