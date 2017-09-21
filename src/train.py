@@ -70,9 +70,9 @@ hparams_relation_classifier = hparams["relationClassifier"]
 hparams_concept_extractor = hparams["conceptExtractor"]
 
 # Models to train:
-TRAIN_RELATION_CLASSIFIER = True
-TRAIN_CONCEPT_EXTRACTOR = True
-TRAIN_ANSWER_GENERATOR = False
+TRAIN_RELATION_CLASSIFIER = False
+TRAIN_CONCEPT_EXTRACTOR = False
+TRAIN_ANSWER_GENERATOR = True
 
 # Open the Knowledge Base:
 print("Loading the knowledge base...")
