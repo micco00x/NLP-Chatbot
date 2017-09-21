@@ -20,6 +20,8 @@ class AnswerGenerator:
 		with tf_graph.as_default():
 			relation = utils.int_to_relation(np.argmax(self.relation_classifier.predict(np.array(q_rcNN))[0]))
 		
+		print("Predicted relation:", relation)
+		
 		# Relation of KBS are different from relations of question_patterns file:
 		if relation == "ACTIVITY": relation_qp = "activity"
 		elif relation == "COLOR": relation_qp = "color"
@@ -38,18 +40,24 @@ class AnswerGenerator:
 		elif relation == "TASTE": relation_qp = "taste"
 		elif relation == "TIME": relation_qp = "time"
 		
-		min_d = sys.maxsize
+		#min_d = sys.maxsize
 		Q = []
+		l = []
 		for r in self.question_patterns.relation_to_questions:
 			for q_p in self.question_patterns[r]:
 				d = utils.levenshtein(question, q_p)
-				if d == min_d:
-					Q.append(q_p)
-				elif d < min_d:
-					min_d = d
-					Q = [q_p]
+				q_p_pos = len(l)
+				for k in range(len(l)):
+					if d <= l[k]:
+						q_p_pos = k
+						break
+				Q.insert(q_p_pos, q_p)
+				l.insert(q_p_pos, d)
 
-		for q in Q:
+		# Consider first best T matches:
+		T = len(Q)
+
+		for q in Q[:T]:
 			print(q)
 			Xpos = q.find("X")
 			Ypos = q.find("Y")
@@ -65,14 +73,16 @@ class AnswerGenerator:
 					afterY = q[Ypos+1:]
 				
 					conceptX_begin_idx = -1
-					conceptX_end_idx = question.find(afterX)
+					pp_afterx = question[Xpos:].find(afterX)
+					if pp_afterx == -1:
+						continue
+					conceptX_end_idx = Xpos + pp_afterx
 					conceptY_begin_idx = -1
 					conceptY_end_idx = question.find(afterY)
 				
 					if question.find(beforeX) != -1:
 						conceptX_begin_idx = Xpos # = len(beforeX)
-					if conceptX_end_idx != -1:
-						conceptY_begin_idx = conceptX_end_idx + len(afterX)
+					conceptY_begin_idx = conceptX_end_idx + len(afterX)
 				
 					print("CONCEPTX_BEGIN_IDX:", conceptX_begin_idx)
 					print("CONCEPTX_END_IDX:", conceptX_end_idx)
@@ -86,14 +96,16 @@ class AnswerGenerator:
 					afterX = q[Xpos+1:]
 					
 					conceptY_begin_idx = -1
-					conceptY_end_idx = question.find(afterY)
+					pp_aftery = question[Ypos:].find(afterY)
+					if pp_aftery == -1:
+						continue
+					conceptY_end_idx = Ypos + pp_aftery
 					conceptX_begin_idx = -1
 					conceptX_end_idx = question.find(afterX)
 				
 					if question.find(beforeY) != -1:
 						conceptY_begin_idx = Ypos # = len(beforeY)
-					if conceptY_end_idx != -1:
-						conceptX_begin_idx = conceptY_end_idx + len(afterY)
+					conceptX_begin_idx = conceptY_end_idx + len(afterY)
 				
 					print("CONCEPTY_BEGIN_IDX:", conceptY_begin_idx)
 					print("CONCEPTY_END_IDX:", conceptY_end_idx)
@@ -164,14 +176,16 @@ class AnswerGenerator:
 						c1 = elem["c1"]
 						if c1.count("bn:") >= 2:
 							pass
-						elif "::bn:" in c1:
-							idx = c1.index("::bn:")
-							w = c1[:idx]
-							if conceptX == w.lower():
+						elif "::" in c1:
+							idx = c1.index("::")
+							w = c1[:idx].lower()
+							if conceptX in w:
 								matchX = True
 						elif "bn:" in c1:
 							try:
-								if conceptX in babelNetCache.cache[c1[c1.index("bn:"):]].lower():
+								bn_conceptx = babelNetCache.cache[c1[c1.index("bn:"):]].lower()
+								#print("bn_conceptx:", bn_conceptx)
+								if conceptX in bn_conceptx or bn_conceptx in conceptX:
 									matchX = True
 							except:
 								pass
@@ -183,14 +197,16 @@ class AnswerGenerator:
 						c2 = elem["c2"]
 						if c2.count("bn:") >= 2:
 							pass
-						elif "::bn:" in c2:
-							idx = c2.index("::bn:")
-							w = c2[:idx]
-							if conceptY.lower() == w.lower():
+						elif "::" in c2:
+							idx = c2.index("::")
+							w = c2[:idx].lower()
+							if conceptY in w:
 								matchY = True
 						elif "bn:" in c2:
 							try:
-								if conceptY in babelNetCache.cache[c2[c2.index("bn:"):]].lower():
+								bn_concepty = babelNetCache.cache[c2[c2.index("bn:"):]].lower()
+								#print("bn_concepty:", bn_concepty)
+								if conceptY in bn_concepty or bn_concepty in conceptY:
 									matchY = True
 							except:
 								pass
