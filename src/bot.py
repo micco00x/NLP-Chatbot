@@ -19,8 +19,10 @@ import torch
 import numpy as np
 import re
 
+from AnswerGenerator import AnswerGenerator
 from BabelNetCache import BabelNetCache
-from QuestionGenerator import *
+from QuestionGenerator import QuestionGenerator
+from QuestionPatterns import QuestionPatterns
 from utils import *
 from Word2Vec import *
 
@@ -52,10 +54,14 @@ class User_Status:
 		self.question_data = ""
 		self.relation = ""
 
+# Question patterns:
+questionPatterns = QuestionPatterns("../resources/patterns.tsv")
+
 # Question generator:
 question_generator = QuestionGenerator("../babelnet/BabelDomains_full/BabelDomains/babeldomains_babelnet.txt",
 									   "../resources/domains_to_relations.tsv",
-									   "../resources/patterns.tsv")
+									   questionPatterns)
+									   #"../resources/patterns.tsv")
 
 # BabelNetCache:
 babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
@@ -90,7 +96,7 @@ seq2seq_model = Seq2Seq("eval",
 						hparams_answer_generator["decoderHiddenSize"],
 						300, # TODO: this should be included in hparams too
 						embedding_padding_idx=vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL])
-# TODO: loading on GPU with CUDA shouldn't create any problem
+# TODO: loading on GPU with CUDA shouldn't create any problem (i.e. you should not need to remove some items)
 state_dict = torch.load(hparams_answer_generator["checkpoint"], map_location=lambda storage, loc:storage)["state_dict"]
 from collections import OrderedDict
 new_state_dict = OrderedDict()
@@ -101,6 +107,16 @@ seq2seq_model.load_state_dict(new_state_dict)
 seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 
 print("Done.")
+
+# Open the Knowledge Base:
+print("Loading the knowledge base...")
+with open("../resources/kb.json") as kb_file:
+	knowledge_base = json.load(kb_file)
+print("Done.")
+
+# Answer generator:
+answerGenerator = AnswerGenerator(knowledge_base, questionPatterns,
+								  relation_classifier, relation_classifier_vocabulary)
 
 # Dictionary of user status (manage multiple users):
 user_status = {}
@@ -163,6 +179,7 @@ def handle(msg):
 				user_status[chat_id].status = USER_STATUS.ANSWERING_QUESTION
 		elif user_status[chat_id].status == USER_STATUS.ASKING_QUESTION:
 			user_status[chat_id].question = msg["text"]
+			print("answerGenerator:", answerGenerator.generate(msg["text"], babelNetCache, graph))
 			q_qaNN = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
 			q_qaNN.reverse() # Q&A NN uses reversed sentence
 			q_rcNN = relation_classifier_vocabulary.sentence2indices(user_status[chat_id].question)
