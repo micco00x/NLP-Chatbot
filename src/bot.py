@@ -158,7 +158,7 @@ def handle(msg):
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
 			print("Recognizing domain:", msg["text"], "->", recognized_domain)
 			user_status[chat_id].domain = recognized_domain
-			if random.uniform(0, 1) < 1.0: # 0.5
+			if random.uniform(0, 1) < 0.5: # 0.5
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
 				user_status[chat_id].status = USER_STATUS.ASKING_QUESTION
 			else:
