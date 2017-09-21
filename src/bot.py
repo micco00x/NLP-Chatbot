@@ -185,9 +185,14 @@ def handle(msg):
 				if torch.cuda.is_available():
 					encoder_input = encoder_input.cuda()
 					decoder_input = decoder_input.cuda()
-				answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
+				answer_idx = []
+				answer_softmax = seq2seq_model(encoder_input, decoder_input, 30)
+				for answer_softmax_i in answer_softmax:
+					topv, topi = answer_softmax_i.data.topk(1)
+					answer_idx.append(topi[0][0])
 				answer = " ".join([vocabulary_decoder.index2word[w_idx] for w_idx in answer_idx[:-1]])
-				if answer = "": answer = "I don't understand." # NN could return an empty sequence
+				if answer == "":
+					answer = "I don't understand." # NN could return an empty sequence
 			else:
 				answer = answerGenerator.generate(msg["text"], babelNetCache, graph)
 			bot.sendMessage(chat_id, answer)
