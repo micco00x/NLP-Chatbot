@@ -104,7 +104,7 @@ class Seq2Seq(torch.nn.Module):
 				
 				# Break if the network loops the answer:
 				l += 1
-				if l > target_length:
+				if l >= target_length:
 					break
 	
 		return output_data
