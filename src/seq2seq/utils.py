@@ -157,8 +157,8 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 	for X, Y in zip(bucket_list_X, bucket_list_Y):
 		for idx in range(0, len(X), batch_size):
 			# Init tensors:
-			x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]), volatile=model.volatile)
-			y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]), volatile=model.volatile)
+			x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]), volatile=True)
+			y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]), volatile=True)
 			
 			if torch.cuda.is_available():
 				x = x.cuda()
