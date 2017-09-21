@@ -127,13 +127,6 @@ babelnet_domain_list_file = open("../babelnet/BabelDomains_full/domain_list.txt"
 for line in babelnet_domain_list_file:
 	babelnet_domains.append(line.rstrip())
 
-# Setting up connection with server:
-conn = http.client.HTTPConnection(SERVER_IP_ADDRESS, SERVER_PORT)
-conn.request("GET", SERVER_PATH + "items_number_from?id=0&key=" + BABELNET_KEY)
-r1 = conn.getresponse()
-conn.close()
-data1 = r1.read()
-
 # Setting up Telegram bot:
 bot = telepot.Bot(CHATBOT_TOKEN)
 #print(bot.getMe())
