@@ -361,18 +361,19 @@ if TRAIN_ANSWER_GENERATOR == True:
 		best_acc = checkpoint["best_acc"]
 		optimizer.load_state_dict(checkpoint["optimizer"])
 
-#	seq2seq.utils.train(seq2seq_model,
-#					    optimizer,
-#						criterion,
-#						padded_bucket_x_train, padded_bucket_y_train,
-#						batch_size=batch_size,
-#						epochs=hparams_answer_generator["epochs"],
-#						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
-#						checkpoint_dir="../models",
-#						early_stopping_max=hparams_answer_generator["earlyStoppingMax"],
-#						starting_epoch=starting_epoch,
-#						starting_iter=starting_iter,
-#						best_acc=best_acc)
+	if seq2seq_model.mode == "train":
+		seq2seq.utils.train(seq2seq_model,
+							optimizer,
+							criterion,
+							padded_bucket_x_train, padded_bucket_y_train,
+							batch_size=batch_size,
+							epochs=hparams_answer_generator["epochs"],
+							validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
+							checkpoint_dir="../models",
+							early_stopping_max=hparams_answer_generator["earlyStoppingMax"],
+							starting_epoch=starting_epoch,
+							starting_iter=starting_iter,
+							best_acc=best_acc)
 
 	# Test the network:
 	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
