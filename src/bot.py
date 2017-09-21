@@ -38,6 +38,8 @@ SERVER_IP_ADDRESS = "151.100.179.26"
 SERVER_PORT = 8080
 SERVER_PATH = "/KnowledgeBaseServer/rest-api/"
 
+USE_SEQ2SEQ = False
+
 # User status (for each user the bot has a different behaviour):
 class USER_STATUS(Enum):
 	STARTING_CONVERSATION = 0
@@ -61,7 +63,6 @@ questionPatterns = QuestionPatterns("../resources/patterns.tsv")
 question_generator = QuestionGenerator("../babelnet/BabelDomains_full/BabelDomains/babeldomains_babelnet.txt",
 									   "../resources/domains_to_relations.tsv",
 									   questionPatterns)
-									   #"../resources/patterns.tsv")
 
 # BabelNetCache:
 babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
@@ -69,6 +70,9 @@ babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
 # HParams from json file (command line args):
 with open(sys.argv[1]) as hparams_file:
 	hparams = json.load(hparams_file)
+
+if len(sys.argv) >= 3 and sys.argv[2] == "--seq2seq":
+	USE_SEQ2SEQ = True
 
 # HParams for answer generator:
 hparams_answer_generator = hparams["answerGenerator"]
@@ -87,24 +91,25 @@ relation_classifier = keras.models.load_model("../models/relation_classifier.ker
 concept_extractor = keras.models.load_model("../models/concept_extractor.keras")
 graph = tf.get_default_graph()
 
-seq2seq_model = Seq2Seq("eval",
-						vocabulary_encoder.VOCABULARY_DIM, vocabulary_decoder.VOCABULARY_DIM,
-						vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL],
-						vocabulary_decoder.word2index[vocabulary_decoder.GO_SYMBOL],
-						vocabulary_decoder.word2index[vocabulary_decoder.EOS_SYMBOL],
-						hparams_answer_generator["encoderHiddenSize"],
-						hparams_answer_generator["decoderHiddenSize"],
-						300, # TODO: this should be included in hparams too
-						embedding_padding_idx=vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL])
-# TODO: loading on GPU with CUDA shouldn't create any problem (i.e. you should not need to remove some items)
-state_dict = torch.load(hparams_answer_generator["checkpoint"], map_location=lambda storage, loc:storage)["state_dict"]
-from collections import OrderedDict
-new_state_dict = OrderedDict()
-for k, v in state_dict.items():
-	if not k.endswith("l1"):
-		new_state_dict[k] = v
-seq2seq_model.load_state_dict(new_state_dict)
-seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
+if USE_SEQ2SEQ:
+	seq2seq_model = Seq2Seq("eval",
+							vocabulary_encoder.VOCABULARY_DIM, vocabulary_decoder.VOCABULARY_DIM,
+							vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL],
+							vocabulary_decoder.word2index[vocabulary_decoder.GO_SYMBOL],
+							vocabulary_decoder.word2index[vocabulary_decoder.EOS_SYMBOL],
+							hparams_answer_generator["encoderHiddenSize"],
+							hparams_answer_generator["decoderHiddenSize"],
+							300, # TODO: this should be included in hparams too
+							embedding_padding_idx=vocabulary_decoder.word2index[vocabulary_decoder.PAD_SYMBOL])
+	# TODO: loading on GPU with CUDA shouldn't create any problem (i.e. you should not need to remove some items)
+	state_dict = torch.load(hparams_answer_generator["checkpoint"], map_location=lambda storage, loc:storage)["state_dict"]
+	from collections import OrderedDict
+	new_state_dict = OrderedDict()
+	for k, v in state_dict.items():
+		if not k.endswith("l1"):
+			new_state_dict[k] = v
+	seq2seq_model.load_state_dict(new_state_dict)
+	seq2seq_model = seq2seq_model.cuda() if torch.cuda.is_available() else seq2seq_model
 
 print("Done.")
 
@@ -172,21 +177,19 @@ def handle(msg):
 				user_status[chat_id].status = USER_STATUS.ANSWERING_QUESTION
 		elif user_status[chat_id].status == USER_STATUS.ASKING_QUESTION:
 			user_status[chat_id].question = msg["text"]
-			print("answerGenerator:", answerGenerator.generate(msg["text"], babelNetCache, graph))
-			q_qaNN = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
-			q_qaNN.reverse() # Q&A NN uses reversed sentence
-			q_rcNN = relation_classifier_vocabulary.sentence2indices(user_status[chat_id].question)
-			with graph.as_default():
-				user_status[chat_id].relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q_rcNN))[0]))
-			# TODO: send correct answer using the model
-			encoder_input = torch.autograd.Variable(torch.LongTensor([q_qaNN]))
-			decoder_input = torch.autograd.Variable(torch.LongTensor([[seq2seq_model.GO_SYMBOL_IDX]]))
-			if torch.cuda.is_available():
-				encoder_input = encoder_input.cuda()
-				decoder_input = decoder_input.cuda()
-			answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
-			answer = " ".join([vocabulary_decoder.index2word[w_idx] for w_idx in answer_idx[:-1]])
-			bot.sendMessage(chat_id, answer + " The relation is " + user_status[chat_id].relation)
+			if USE_SEQ2SEQ:
+				q_qaNN = vocabulary_encoder.sentence2indices(user_status[chat_id].question)
+				q_qaNN.reverse() # Q&A NN uses reversed sentence
+				encoder_input = torch.autograd.Variable(torch.LongTensor([q_qaNN]))
+				decoder_input = torch.autograd.Variable(torch.LongTensor([[seq2seq_model.GO_SYMBOL_IDX]]))
+				if torch.cuda.is_available():
+					encoder_input = encoder_input.cuda()
+					decoder_input = decoder_input.cuda()
+				answer_idx = seq2seq_model(encoder_input, decoder_input, 30)
+				answer = " ".join([vocabulary_decoder.index2word[w_idx] for w_idx in answer_idx[:-1]])
+			else:
+				answer = answerGenerator.generate(msg["text"], babelNetCache, graph)
+			bot.sendMessage(chat_id, answer)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
 			answer = msg["text"]
