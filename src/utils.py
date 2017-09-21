@@ -66,12 +66,12 @@ def babelfy_disambiguate(sentence, concept_start, concept_end):
 		f = gzip.GzipFile(fileobj=buf)
 		data = json.loads(f.read().decode("utf-8"))
 		
-		print("Babelfy disambiguation results:")
+		#print("Babelfy disambiguation results:")
 		for result in data:
 			tokenFragment = result.get("tokenFragment")
 			tfStart = tokenFragment.get("start")
 			tfEnd = tokenFragment.get("end")
-			print(("\t" + str(tfStart) + "\t" + str(tfEnd)))
+			#print(("\t" + str(tfStart) + "\t" + str(tfEnd)))
 			
 			if tfStart == concept_start and tfEnd == concept_end:
 				return " ".join(sentence.split()[concept_start:concept_end+1]) + "::" + result.get("babelSynsetID")
