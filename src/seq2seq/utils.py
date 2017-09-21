@@ -47,8 +47,8 @@ def train(model, optimizer, criterion,
 					continue
 			
 				# Init tensors:
-				x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
-				y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]))
+				x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]), volatile=model.volatile)
+				y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]), volatile=model.volatile)
 				
 				if torch.cuda.is_available():
 					x = x.cuda()
@@ -157,8 +157,8 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 	for X, Y in zip(bucket_list_X, bucket_list_Y):
 		for idx in range(0, len(X), batch_size):
 			# Init tensors:
-			x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]))
-			y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]))
+			x = torch.autograd.Variable(torch.LongTensor(X[idx:min(idx+batch_size, len(X))]), volatile=model.volatile)
+			y = torch.autograd.Variable(torch.LongTensor(Y[idx:min(idx+batch_size, len(Y))]), volatile=model.volatile)
 			
 			if torch.cuda.is_available():
 				x = x.cuda()
@@ -182,7 +182,7 @@ def evaluate(model, criterion, bucket_list_X, bucket_list_Y, batch_size=32):
 def _compute_loss(model, criterion, x, y):
 
 	encoder_input = x
-	decoder_input = torch.autograd.Variable(torch.LongTensor([[model.GO_SYMBOL_IDX]] * x.size()[0]))
+	decoder_input = torch.autograd.Variable(torch.LongTensor([[model.GO_SYMBOL_IDX]] * x.size()[0]), volatile=model.volatile)
 	decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 	target_length = y.size()[1]
 	list_y_p = model(encoder_input, decoder_input, target_length)

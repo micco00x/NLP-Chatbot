@@ -24,6 +24,10 @@ class Seq2Seq(torch.nn.Module):
 		# TODO: with mode="eval" there's no need to take values of gradients
 		#		of gradients of the graph since a backward operations is never
 		#		performed, you can use this to save RAM
+		if mode == "eval":
+			self.volatile = True
+		else:
+			self.volatile = False
 		
 		# hparams:
 		self.mode = mode
@@ -82,7 +86,7 @@ class Seq2Seq(torch.nn.Module):
 				decoder_output, decoder_hidden = self._decoder_forward(decoder_input, decoder_hidden)
 				topv, topi = decoder_output.data.topk(1)
 
-				decoder_input = torch.autograd.Variable(torch.LongTensor(topi.cpu()))
+				decoder_input = torch.autograd.Variable(torch.LongTensor(topi.cpu()), volatile=self.volatile)
 				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 
 				output_data.append(decoder_output)
@@ -92,7 +96,7 @@ class Seq2Seq(torch.nn.Module):
 				decoder_output, decoder_hidden = self._decoder_forward(decoder_input, decoder_hidden)
 				topv, topi = decoder_output.data.topk(1)
 
-				decoder_input = torch.autograd.Variable(torch.LongTensor(topi.cpu()))
+				decoder_input = torch.autograd.Variable(torch.LongTensor(topi.cpu()), volatile=self.volatile)
 				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 				
 				output_data.append(decoder_input[0].data[0])

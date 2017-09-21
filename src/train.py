@@ -331,7 +331,7 @@ if TRAIN_ANSWER_GENERATOR == True:
 	# Define the network:
 	emb_matrix_big = word2vec.createEmbeddingMatrix(vocabulary_big)
 	emb_matrix_small = word2vec.createEmbeddingMatrix(vocabulary_small)
-	seq2seq_model = Seq2Seq("train",
+	seq2seq_model = Seq2Seq("eval",
 							vocabulary_big.VOCABULARY_DIM, vocabulary_small.VOCABULARY_DIM,
 							vocabulary_small.word2index[vocabulary_small.PAD_SYMBOL],
 							vocabulary_small.word2index[vocabulary_small.GO_SYMBOL],
@@ -361,18 +361,18 @@ if TRAIN_ANSWER_GENERATOR == True:
 		best_acc = checkpoint["best_acc"]
 		optimizer.load_state_dict(checkpoint["optimizer"])
 
-	seq2seq.utils.train(seq2seq_model,
-					    optimizer,
-						criterion,
-						padded_bucket_x_train, padded_bucket_y_train,
-						batch_size=batch_size,
-						epochs=hparams_answer_generator["epochs"],
-						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
-						checkpoint_dir="../models",
-						early_stopping_max=hparams_answer_generator["earlyStoppingMax"],
-						starting_epoch=starting_epoch,
-						starting_iter=starting_iter,
-						best_acc=best_acc)
+#	seq2seq.utils.train(seq2seq_model,
+#					    optimizer,
+#						criterion,
+#						padded_bucket_x_train, padded_bucket_y_train,
+#						batch_size=batch_size,
+#						epochs=hparams_answer_generator["epochs"],
+#						validation_data=[padded_bucket_x_dev, padded_bucket_y_dev],
+#						checkpoint_dir="../models",
+#						early_stopping_max=hparams_answer_generator["earlyStoppingMax"],
+#						starting_epoch=starting_epoch,
+#						starting_iter=starting_iter,
+#						best_acc=best_acc)
 
 	# Test the network:
 	test_loss, test_accuracy = seq2seq.utils.evaluate(seq2seq_model, criterion, padded_bucket_x_test, padded_bucket_y_test, batch_size)
