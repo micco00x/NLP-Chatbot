@@ -100,7 +100,7 @@ class Seq2Seq(torch.nn.Module):
 				decoder_input = decoder_input.cuda() if torch.cuda.is_available() else decoder_input
 				
 				#output_data.append(decoder_input[0].data[0])
-				outpus_data.append(decoder_output)
+				output_data.append(decoder_output)
 				
 				# Break if the network loops the answer:
 				l += 1
