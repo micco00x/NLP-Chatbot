@@ -73,7 +73,7 @@ hparams_concept_extractor_answer = hparams["conceptExtractorAnswer"]
 # Models to train:
 TRAIN_RELATION_CLASSIFIER = False
 TRAIN_CONCEPT_EXTRACTOR_QUESTION = True
-TRAIN_CONCEPT_EXTRACTOR_ANSWER = True
+TRAIN_CONCEPT_EXTRACTOR_ANSWER = False
 TRAIN_ANSWER_GENERATOR = False
 
 # Open the Knowledge Base:
@@ -169,7 +169,7 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 	cnt = 0
 	kb_len = int(len(knowledge_base) * hparams_concept_extractor_question["kbLenPercentage"])
 	print("Reading the knowledge base (" + str(kb_len) + " elements)")
-
+	
 	for elem in knowledge_base[:kb_len]:
 
 		cnt += 1
@@ -216,9 +216,6 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 			c1_i1 = find_pattern(question_split, w_split)
 			c1_i2 = c1_i1 + len(w_split) - 1
 
-		if c1_i1 == -1 or c1_i2 == -1:
-			continue
-
 		# Get indices of c2:
 		if "::bn:" in c2: # case "w::bn:--n"
 			idx = c2.index("::bn:")
@@ -247,9 +244,6 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 			c2_i1 = find_pattern(question_split, w_split)
 			c2_i2 = c2_i1 + len(w_split) - 1
 
-		if c2_i1 == -1 or c2_i2 == -1:
-			continue
-
 		# Create data for the NN:
 		x = concept_extractor_question_vocabulary.sentence2indices(question)
 		y = [[0, 0, 0, 1] for _ in range(len(x))]
@@ -260,20 +254,21 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 
 		# Begin and end of the concept,
 		# activation is (Begin+End, Begin (but not End), End (but not Begin), Other (not Begin nor End)):
+		if c1_i1 != -1 and c1_i2 != -1:
+			if c1_i1 == c1_i2:
+				y[c1_i1] = [1, 0, 0, 0]
+			else:
+				y[c1_i1] = [0, 1, 0, 0]
+				y[c1_i2] = [0, 0, 1, 0]
 
-		if c1_i1 == c1_i2:
-			y[c1_i1] = [1, 0, 0, 0]
-		else:
-			y[c1_i1] = [0, 1, 0, 0]
-			y[c1_i2] = [0, 0, 1, 0]
+		if c2_i1 != -1 and c2_i2 != -1:
+			if c2_i1 == c2_i2:
+				y[c2_i1] = [1, 0, 0, 0]
+			else:
+				y[c2_i1] = [0, 1, 0, 0]
+				y[c2_i2] = [0, 0, 1, 0]
 
-		if c2_i1 == c2_i2:
-			y[c2_i1] = [1, 0, 0, 0]
-		else:
-			y[c2_i1] = [0, 1, 0, 0]
-			y[c2_i2] = [0, 0, 1, 0]
-
-		#print("x:", x)
+		#print("question:", split_words_punctuation(question))
 		#print("y:", y)
 
 		X.append(x)
