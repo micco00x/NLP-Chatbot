@@ -39,6 +39,8 @@ SERVER_PORT = 8080
 SERVER_PATH = "/KnowledgeBaseServer/rest-api/"
 
 USE_SEQ2SEQ = False
+USE_ANSWER_GENERATOR = False
+USE_CONCEPT_EXTRACTOR = False
 
 # User status (for each user the bot has a different behaviour):
 class USER_STATUS(Enum):
@@ -73,22 +75,36 @@ with open(sys.argv[1]) as hparams_file:
 
 if len(sys.argv) >= 3 and sys.argv[2] == "--seq2seq":
 	USE_SEQ2SEQ = True
+elif len(sys.argv) >= 3 and sys.argv[2] == "--answergenerator":
+	USE_ANSWER_GENERATOR = True
+elif len(sys.argv) >= 3 and sys.argv[2] == "--conceptextractor":
+	USE_CONCEPT_EXTRACTOR = True
+else:
+	print("You need to specify an algorithm to generate answers.")
+	print("Select one between:")
+	print(" * --seq2seq")
+	print(" * --answergenerator")
+	print(" * --conceptextractor")
+	sys.exit(-1)
 
 # HParams for answer generator:
 hparams_answer_generator = hparams["answerGenerator"]
 hparams_relation_classifier = hparams["relationClassifier"]
-hparams_concept_extractor = hparams["conceptExtractor"]
+hparams_concept_extractor_question = hparams["conceptExtractorQuestion"]
+hparams_concept_extractor_answer = hparams["conceptExtractorAnswer"]
 
 # Vocabularies for seq2seq encoder/decoder:
 vocabulary_encoder = Vocabulary(hparams_answer_generator["encoderVocabularyPath"])
 vocabulary_decoder = Vocabulary(hparams_answer_generator["decoderVocabularyPath"])
 relation_classifier_vocabulary = Vocabulary(hparams_relation_classifier["vocabularyPath"])
-concept_extractor_vocabulary = Vocabulary(hparams_concept_extractor["vocabularyPath"])
+concept_extractor_question_vocabulary = Vocabulary(hparams_concept_extractor_question["vocabularyPath"])
+concept_extractor_answer_vocabulary = Vocabulary(hparams_concept_extractor_answer["vocabularyPath"])
 
 # Load NN models:
 print("Loading NN models...")
 relation_classifier = keras.models.load_model("../models/relation_classifier.keras")
-concept_extractor = keras.models.load_model("../models/concept_extractor.keras")
+concept_extractor_question = keras.models.load_model("../models/concept_extractor_question.keras")
+concept_extractor_answer = keras.models.load_model("../models/concept_extractor_answer.keras")
 graph = tf.get_default_graph()
 
 if USE_SEQ2SEQ:
@@ -158,7 +174,7 @@ def handle(msg):
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
 			print("Recognizing domain:", msg["text"], "->", recognized_domain)
 			user_status[chat_id].domain = recognized_domain
-			if random.uniform(0, 1) < 0.5: # 0.5
+			if random.uniform(0, 1) < 1.0: # 0.5
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
 				user_status[chat_id].status = USER_STATUS.ASKING_QUESTION
 			else:
@@ -193,8 +209,15 @@ def handle(msg):
 				answer = " ".join([vocabulary_decoder.index2word[w_idx] for w_idx in answer_idx[:-1]])
 				if answer == "":
 					answer = "I don't understand." # NN could return an empty sequence
-			else:
+			elif USE_ANSWER_GENERATOR:
 				answer = answerGenerator.generate(msg["text"], babelNetCache, graph)
+			else: # USE_CONCEPT_EXTRACTOR
+				with graph.as_default():
+					probability_concept = concept_extractor_question.predict(np.array(concept_extractor_question_vocabulary.sentence2indices(user_status[chat_id].question)))
+				print(probability_concept)
+				c1_tokens = probabilities_to_concept_tokens(probability_concept)
+				question_punctuation_split = split_words_punctuation(user_status[chat_id].question)
+				answer = "c1: " + " ".join(question_punctuation_split[c1_tokens[0]:c1_tokens[1]+1])
 			bot.sendMessage(chat_id, answer)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
@@ -211,7 +234,7 @@ def handle(msg):
 			elif user_status[chat_id].question_data["type"] == "X":
 				c1 = user_status[chat_id].question_data["id1"]
 				with graph.as_default():
-					c2_probability_concept = concept_extractor.predict(np.array(concept_extractor_vocabulary.sentence2indices(answer)))
+					c2_probability_concept = concept_extractor_answer.predict(np.array(concept_extractor_answer_vocabulary.sentence2indices(answer)))
 				print(c2_probability_concept)
 				c2_tokens = probabilities_to_concept_tokens(c2_probability_concept)
 				print("c2_tokens:", c2_tokens)
@@ -230,7 +253,7 @@ def handle(msg):
 			else:
 				c2 = user_status[chat_id].question_data["id2"]
 				with graph.as_default():
-					c1_probability_concept = concept_extractor.predict(np.array(concept_extractor_vocabulary.sentence2indices(answer)))
+					c1_probability_concept = concept_extractor_answer.predict(np.array(concept_extractor_answer_vocabulary.sentence2indices(answer)))
 				print(c1_probability_concept)
 				c1_tokens = probabilities_to_concept_tokens(c1_probability_concept)
 				print("c1_tokens:", c1_tokens)
