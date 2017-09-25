@@ -246,7 +246,7 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 
 		# Create data for the NN:
 		x = concept_extractor_question_vocabulary.sentence2indices(question)
-		y = [[0, 0, 0, 1] for _ in range(len(x))]
+		y = [[0, 0, 0, 0, 0, 0, 1] for _ in range(len(x))]
 
 		# The KB could be malformed, validate c1(2)_i2
 		c1_i2 = min(c2_i2, len(x)-1)
@@ -256,17 +256,17 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 		# activation is (Begin+End, Begin (but not End), End (but not Begin), Other (not Begin nor End)):
 		if c1_i1 != -1 and c1_i2 != -1:
 			if c1_i1 == c1_i2:
-				y[c1_i1] = [1, 0, 0, 0]
+				y[c1_i1] = [1, 0, 0, 0, 0, 0, 0]
 			else:
-				y[c1_i1] = [0, 1, 0, 0]
-				y[c1_i2] = [0, 0, 1, 0]
+				y[c1_i1] = [0, 1, 0, 0, 0, 0, 0]
+				y[c1_i2] = [0, 0, 1, 0, 0 ,0, 0]
 
 		if c2_i1 != -1 and c2_i2 != -1:
 			if c2_i1 == c2_i2:
-				y[c2_i1] = [1, 0, 0, 0]
+				y[c2_i1] = [0, 0, 0, 1, 0, 0, 0]
 			else:
-				y[c2_i1] = [0, 1, 0, 0]
-				y[c2_i2] = [0, 0, 1, 0]
+				y[c2_i1] = [0, 0, 0, 0, 1, 0, 0]
+				y[c2_i2] = [0, 0, 0, 0, 0, 1, 0]
 
 		#print("question:", split_words_punctuation(question))
 		#print("y:", y)
@@ -295,7 +295,7 @@ if TRAIN_CONCEPT_EXTRACTOR_QUESTION:
 											 trainable=True,
 											 mask_zero=True))
 	concept_extractor_question.add(Bidirectional(LSTM(units=hparams_concept_extractor_question["hiddenSize"], return_sequences=True)))
-	concept_extractor_question.add(Dense(4))
+	concept_extractor_question.add(Dense(7))
 	concept_extractor_question.add(Activation("softmax"))
 
 	# Compile the network:
