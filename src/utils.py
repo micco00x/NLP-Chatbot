@@ -110,6 +110,65 @@ def probabilities_to_concept_tokens(probabilities):
 
 	return [B, E]
 
+def probabilities_to_c1_c2(probabilities):
+	B_c1 = -1
+	E_c1 = -1
+	B_c2 = -1
+	E_c2 = -1
+	c1_is_begin = False
+	c2_is_begin = False
+
+	p = 0.5 # min threshold (and curr. prob.)
+
+	# Searching for c1:
+	for x in range(len(probabilities)):
+		argmax = np.argmax(probabilities[x][0])
+		if probabilities[x][0][argmax] >= p and (argmax == 0 or argmax == 1):
+			B_c1 = x
+			p = probabilities[x][0][argmax]
+			if argmax == 0:
+				c1_is_begin = False
+			if argmax == 1:
+				c1_is_begin = True
+
+	p = 0
+
+	if c1_is_begin:
+		for x in range(B_c1, len(probabilities)):
+			argmax = np.argmax(probabilities[x][0])
+			if probabilities[x][0][argmax] >= p and argmax == 2:
+				E_c1 = x
+				p = probabilities[x][0][argmax]
+	else:
+		E_c1 = B_c1
+
+
+	p = 0.5 # min threshold (and curr. prob.)
+
+	# Searching for c2:
+	for x in range(len(probabilities)):
+		argmax = np.argmax(probabilities[x][0])
+		if probabilities[x][0][argmax] >= p and (argmax == 3 or argmax == 4):
+			B_c2 = x
+			p = probabilities[x][0][argmax]
+			if argmax == 0:
+				c2_is_begin = False
+			if argmax == 1:
+				c2_is_begin = True
+
+	p = 0
+
+	if c2_is_begin:
+		for x in range(B_c2, len(probabilities)):
+			argmax = np.argmax(probabilities[x][0])
+			if probabilities[x][0][argmax] >= p and argmax == 5:
+				E_c2 = x
+				p = probabilities[x][0][argmax]
+	else:
+		E_c2 = B_c2
+
+	return [B_c1, E_c1, B_c2, E_c2]
+
 # Convert relation string to int:
 def relation_to_int(relation):
 	return {"ACTIVITY": 0, "COLOR": 1, "GENERALIZATION": 2, "HOW_TO_USE": 3, "MATERIAL": 4, "PART": 5, "PLACE": 6,
