@@ -21,6 +21,7 @@ import re
 
 from AnswerGenerator import AnswerGenerator
 from BabelNetCache import BabelNetCache
+from KnowledgeBase import KnowledgeBase
 from QuestionGenerator import QuestionGenerator
 from QuestionPatterns import QuestionPatterns
 from utils import *
@@ -130,6 +131,7 @@ if USE_SEQ2SEQ:
 print("Done.")
 
 # Open the Knowledge Base:
+knowledgeBase = KnowledgeBase("../resources/kb.json")
 print("Loading the knowledge base...")
 with open("../resources/kb.json") as kb_file:
 	knowledge_base = json.load(kb_file)
@@ -212,12 +214,39 @@ def handle(msg):
 			elif USE_ANSWER_GENERATOR:
 				answer = answerGenerator.generate(msg["text"], babelNetCache, graph)
 			else: # USE_CONCEPT_EXTRACTOR
+				q_rcNN = relation_classifier_vocabulary.sentence2indices(user_status[chat_id].question)
 				with graph.as_default():
+					relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q_rcNN))[0]))
 					probability_concept = concept_extractor_question.predict(np.array(concept_extractor_question_vocabulary.sentence2indices(user_status[chat_id].question)))
+				
 				print(probability_concept)
-				c1_tokens = probabilities_to_concept_tokens(probability_concept)
+				
+				concepts_tokens = probabilities_to_c1_c2(probability_concept)
 				question_punctuation_split = split_words_punctuation(user_status[chat_id].question)
-				answer = "c1: " + " ".join(question_punctuation_split[c1_tokens[0]:c1_tokens[1]+1])
+				
+				answer = ""
+				
+				c1 = None
+				c2 = None
+				
+				if concepts_tokens[0] != -1:
+					c1 = " ".join(question_punctuation_split[concepts_tokens[0]:concepts_tokens[1]+1])
+				if concepts_tokens[2] != -1:
+					c2 = " ".join(question_punctuation_split[concepts_tokens[2]:concepts_tokens[3]+1])
+				
+				elem = knowledgeBase.search(babelNetCache, relation, c1, c2)
+				
+				# Search for a different combination (one of the concepts could be wrong):
+				if elem == None and c1 != None and c2 != None:
+					elem = knowledgeBase.search(babelNetCache, relation, c1, None)
+				if elem == None and c1 != None and c2 != None:
+					elem = knowledgeBase.search(babelNetCache, relation, None, c2)
+
+				if elem != None:
+					answer = elem["answer"]
+				else:
+					answer = "I don't understand."
+					
 			bot.sendMessage(chat_id, answer)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
