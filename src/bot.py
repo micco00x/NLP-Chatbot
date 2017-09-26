@@ -75,10 +75,13 @@ with open(sys.argv[1]) as hparams_file:
 	hparams = json.load(hparams_file)
 
 if len(sys.argv) >= 3 and sys.argv[2] == "--seq2seq":
+	print("Bot is using Seq2Seq.")
 	USE_SEQ2SEQ = True
 elif len(sys.argv) >= 3 and sys.argv[2] == "--answergenerator":
+	print("Bot is using Answer Generator (no learning algorithms).")
 	USE_ANSWER_GENERATOR = True
 elif len(sys.argv) >= 3 and sys.argv[2] == "--conceptextractor":
+	print("Bot is using Relation classifier and Concept Extractor.")
 	USE_CONCEPT_EXTRACTOR = True
 else:
 	print("You need to specify an algorithm to generate answers.")
@@ -138,8 +141,7 @@ with open("../resources/kb.json") as kb_file:
 print("Done.")
 
 # Answer generator:
-answerGenerator = AnswerGenerator(knowledge_base, questionPatterns,
-								  relation_classifier, relation_classifier_vocabulary)
+answerGenerator = AnswerGenerator(knowledge_base, questionPatterns)
 
 # Dictionary of user status (manage multiple users):
 user_status = {}
@@ -165,7 +167,7 @@ def handle(msg):
 	#print(content_type, chat_type, chat_id)
 			
 	if content_type == "text":
-		print(str(chat_id) + ":", msg["text"])
+		print("From " + str(chat_id) + ": " + msg["text"])
 		
 		if chat_id not in user_status:
 			bot.sendMessage(chat_id, "Hi!")
@@ -174,7 +176,7 @@ def handle(msg):
 		if user_status[chat_id].status == USER_STATUS.CHOOSING_DOMAIN:
 			# TODO: recognize domain via NN (you need a dataset)
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
-			print("Recognizing domain:", msg["text"], "->", recognized_domain)
+			print("Recognizing domain (" + str(chat_id) + "): " + msg["text"] + " -> " + recognized_domain)
 			user_status[chat_id].domain = recognized_domain
 			if random.uniform(0, 1) < 1.0: # 0.5
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
@@ -212,7 +214,7 @@ def handle(msg):
 				if answer == "":
 					answer = "I don't understand." # NN could return an empty sequence
 			elif USE_ANSWER_GENERATOR:
-				answer = answerGenerator.generate(msg["text"], babelNetCache, graph)
+				answer = answerGenerator.generate(msg["text"], babelNetCache)
 			else: # USE_CONCEPT_EXTRACTOR
 				q_rcNN = relation_classifier_vocabulary.sentence2indices(user_status[chat_id].question)
 				with graph.as_default():
@@ -246,7 +248,8 @@ def handle(msg):
 					answer = elem["answer"]
 				else:
 					answer = "I don't understand."
-					
+		
+			print("To " + str(chat_id) + ": " + answer)
 			bot.sendMessage(chat_id, answer)
 			user_status[chat_id].status = USER_STATUS.STARTING_CONVERSATION
 		elif user_status[chat_id].status == USER_STATUS.ANSWERING_QUESTION:
