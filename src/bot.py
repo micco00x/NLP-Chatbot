@@ -74,13 +74,14 @@ babelNetCache = BabelNetCache("../resources/babelnet_cache.tsv")
 with open(sys.argv[1]) as hparams_file:
 	hparams = json.load(hparams_file)
 
-if len(sys.argv) >= 3 and sys.argv[2] == "--seq2seq":
+# Algorithm to answer the questions:
+if sys.argv[2] == "--seq2seq":
 	print("Bot is using Seq2Seq.")
 	USE_SEQ2SEQ = True
-elif len(sys.argv) >= 3 and sys.argv[2] == "--answergenerator":
+elif sys.argv[2] == "--answergenerator":
 	print("Bot is using Answer Generator (no learning algorithms).")
 	USE_ANSWER_GENERATOR = True
-elif len(sys.argv) >= 3 and sys.argv[2] == "--conceptextractor":
+elif sys.argv[2] == "--conceptextractor":
 	print("Bot is using Relation classifier and Concept Extractor.")
 	USE_CONCEPT_EXTRACTOR = True
 else:
@@ -90,6 +91,20 @@ else:
 	print(" * --answergenerator")
 	print(" * --conceptextractor")
 	sys.exit(-1)
+
+# Set threshold for question-answer:
+if sys.argv[3] == "--onlyquestion":
+	QA_THRESHOLD = 1.0
+elif sys.argv[3] == "--onlyanswer":
+	QA_THRESHOLD = 0.0
+elif sys.argv[3] == "--bothQA":
+	QA_THRESHOLD = 0.5
+else:
+	print("You need to specify how you are going to use the bot (useful during testing):")
+	print("Select one between:")
+	print(" * --onlyquestion")
+	print(" * --onlyanswer")
+	print(" * --bothQA")
 
 # HParams for answer generator:
 hparams_answer_generator = hparams["answerGenerator"]
@@ -135,10 +150,6 @@ print("Done.")
 
 # Open the Knowledge Base:
 knowledgeBase = KnowledgeBase("../resources/kb.json")
-#print("Loading the knowledge base...")
-#with open("../resources/kb.json") as kb_file:
-#	knowledge_base = json.load(kb_file)
-#print("Done.")
 
 # Answer generator:
 answerGenerator = AnswerGenerator(knowledgeBase, questionPatterns)
@@ -178,7 +189,7 @@ def handle(msg):
 			recognized_domain = recognize_domain(babelnet_domains, msg["text"])
 			print("Recognizing domain (" + str(chat_id) + "): " + msg["text"] + " -> " + recognized_domain)
 			user_status[chat_id].domain = recognized_domain
-			if random.uniform(0, 1) < 1.0: # 0.5
+			if random.uniform(0, 1) < QA_THRESHOLD:
 				bot.sendMessage(chat_id, "Ask me anything when you're ready then!")
 				user_status[chat_id].status = USER_STATUS.ASKING_QUESTION
 			else:
@@ -267,9 +278,9 @@ def handle(msg):
 				c1 = user_status[chat_id].question_data["id1"]
 				with graph.as_default():
 					c2_probability_concept = concept_extractor_answer.predict(np.array(concept_extractor_answer_vocabulary.sentence2indices(answer)))
-				print(c2_probability_concept)
+				#print(c2_probability_concept)
 				c2_tokens = probabilities_to_concept_tokens(c2_probability_concept)
-				print("c2_tokens:", c2_tokens)
+				#print("c2_tokens:", c2_tokens)
 				# NN tokens indices to BabelNet token indices:
 				for idx, w in enumerate(answer_split):
 					if answer_punctuation_split[c2_tokens[0]] in w:
@@ -278,7 +289,7 @@ def handle(msg):
 				for idx, w in enumerate(answer_split):
 					if answer_punctuation_split[c2_tokens[1]] in w:
 						c2_tokens[1] = idx
-				print("c2_tokens:", c2_tokens)
+				#print("c2_tokens:", c2_tokens)
 				c2 = babelfy_disambiguate(answer, c2_tokens[0], c2_tokens[1])
 				data_c1 = user_status[chat_id].question_data["c1"] + "::" + c1
 				data_c2 = c2
