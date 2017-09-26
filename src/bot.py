@@ -135,13 +135,13 @@ print("Done.")
 
 # Open the Knowledge Base:
 knowledgeBase = KnowledgeBase("../resources/kb.json")
-print("Loading the knowledge base...")
-with open("../resources/kb.json") as kb_file:
-	knowledge_base = json.load(kb_file)
-print("Done.")
+#print("Loading the knowledge base...")
+#with open("../resources/kb.json") as kb_file:
+#	knowledge_base = json.load(kb_file)
+#print("Done.")
 
 # Answer generator:
-answerGenerator = AnswerGenerator(knowledge_base, questionPatterns)
+answerGenerator = AnswerGenerator(knowledgeBase, questionPatterns)
 
 # Dictionary of user status (manage multiple users):
 user_status = {}

@@ -4,10 +4,10 @@ import sys
 
 class AnswerGenerator:
 	def __init__(self,
-				 knowledge_base, question_patterns):
+				 knowledgeBase, question_patterns):
 		# Linear algorithm seems to work well with 1M elements
 		# but could be quicker with dictionaries:
-		self.knowledge_base = knowledge_base
+		self.knowledgeBase = knowledgeBase
 	
 		self.question_patterns = question_patterns
 
@@ -138,7 +138,7 @@ class AnswerGenerator:
 				conceptY = question[concept_begin_idx:concept_end_idx].lower()
 				#print("conceptY:", conceptY)
 				
-			for elem in self.knowledge_base:
+			for elem in self.knowledgeBase.kb:
 				matchX = False
 				matchY = False
 			
