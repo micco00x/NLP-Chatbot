@@ -36,6 +36,7 @@ To download the knowledge base simply type from the terminal:
 ~~~~
 python3 download_kb.py
 ~~~~
+The knowledge base will be saved on a JSON file in the folder `resources`.
 
 ## How to Generate a Vocabulary
 To generate a vocabulary from the knowledge base simply type from the terminal:
@@ -61,7 +62,6 @@ select a random tuple randomly. Run the script by typing:
 ~~~~
 python3 query_kb.py
 ~~~~
-
 Once the program has been loaded the knowledge base type `search=SENTENCE` to
 search for a sentence, `random` to randomly select a tuple or `quit` to exit
 from the program.
