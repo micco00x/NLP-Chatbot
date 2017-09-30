@@ -1,0 +1,589 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Short Sectioned Assignment
+% LaTeX Template
+% Version 1.0 (5/5/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Frits Wenneker (http://www.howtotex.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+% Download template:
+% Overleaf (https://www.overleaf.com/8746855dtrgkbkbjjhm)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[paper=a4, fontsize=11pt]{scrartcl} % A4 paper and 11pt font size
+
+%\usepackage[options]{nohyperref}  % This makes hyperref commands do nothing without errors
+%\usepackage{url}  % This makes \url work
+%\usepackage{hyperref}
+
+\usepackage{graphicx}
+
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\usepackage{fourier} % Use the Adobe Utopia font for the document - comment this line to return to the LaTeX default
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+
+\usepackage{lipsum} % Used for inserting dummy 'Lorem ipsum' text into the template
+
+\usepackage{sectsty} % Allows customizing section commands
+\allsectionsfont{\centering \normalfont\scshape} % Make all sections centered, the default font and small caps
+
+\usepackage{fancyhdr} % Custom headers and footers
+\pagestyle{fancyplain} % Makes all pages in the document conform to the custom headers and footers
+\fancyhead{} % No page header - if you want one, create it in the same way as the footers below
+\fancyfoot[L]{} % Empty left footer
+\fancyfoot[C]{} % Empty center footer
+\fancyfoot[R]{\thepage} % Page numbering for right footer
+\renewcommand{\headrulewidth}{0pt} % Remove header underlines
+\renewcommand{\footrulewidth}{0pt} % Remove footer underlines
+\setlength{\headheight}{13.6pt} % Customize the height of the header
+
+\numberwithin{equation}{section} % Number equations within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
+\numberwithin{figure}{section} % Number figures within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
+\numberwithin{table}{section} % Number tables within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
+
+%\setlength\parindent{0pt} % Removes all indentation from paragraphs - comment this line for an assignment with lots of text
+\usepackage{indentfirst} % Indentation for all paragraphs
+
+% Used for definitions:
+\usepackage{amsthm}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+% To write algorithms in pseudocode:
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+% Don't use colon in algorithms lines:
+\algrenewcommand\alglinenumber[1]{\footnotesize #1}
+
+% Input/Output instead of Require/Ensure in algorithms pseudocode:
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}} % Create horizontal rule command with 1 argument of height
+
+\title{	
+\normalfont \normalsize 
+\textsc{Sapienza University of Rome} \\ [25pt] % Your university, school and/or department name(s)
+\horrule{0.5pt} \\[0.4cm] % Thin top horizontal rule
+\huge Natural Language Processing \\ % The assignment title
+\large Final Project: The Knowledge Bot \\
+\horrule{2pt} \\[0.5cm] % Thick bottom horizontal rule
+}
+
+\author{Michele Cipriano} % Your name
+
+\date{\normalsize\today} % Today's date or a custom date
+
+\begin{document}
+
+\maketitle % Print the title
+
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+
+The development of a question-answer system has always been a challenging 
+topic in artificial intelligence starting from the early developments
+of computer science with the Turing test.
+During last years these kind of systems have seen an increasing interest 
+from top companies, which are mainly developing personal assistants that can
+help users in basic tasks or answer to questions with a various range of complexity,
+from ``What's the weather today?'' to ``What's the integral of $f(x)$?''.
+This possibilities are due to developments in natural language processing and
+to the availability of GPUs that can speed up the learning process of
+neural networks which are more and more used in various tasks of NLP.
+
+The aim of this project is to develop a bot that can answer to questions and
+can improve its behaviour by asking new questions to the users and learning
+by their answers.
+To achieve this, a dataset containing a large amount of question-answer pairs
+(1.1M) has been used.
+The whole project has
+been developed in Python, using Keras and PyTorch to simplify the learning
+process for the models used by the bot. It can answer and ask questions
+communicating with a Knowledge Base Server, which is collecting all the
+old and the new data, and it works using Telegram API, which makes it easy to
+send and receive messages from whatever device. The behaviour of the bot
+strictly follows a workflow which will be described in depth in section
+\ref{section:workflow}.
+
+The main part of the workflow is the querying phase. Here three different
+methods have been developed and compared. First, an ad hoc algorithm has been
+developed without using any learning algorithm to classify relations or to extract concepts from
+the sentences, this method works fine only if a certain set of patterns
+is being followed, otherwise it fails. To improve it, a relation classifier
+and a concept extractor have been developed to
+search for the subject and the object of the questions. This method made
+the bot much more flexible, allowing it to answer to a larger amount of
+questions, but it's not always able to extract concepts correctly. Nowadays state-of-the-art models are using variations of
+Seq2Seq \cite{Sutskever:2014:SSL:2969033.2969173};
+in this project a basic end-to-end model based on Seq2Seq has been
+developed and studyied to test how well this kind of method performs on the knowledge base
+used. Unfortunately, even if the
+network is able to understand some patterns, it's not able to answer to the
+questions. An in-depth analysis of this model is done in section
+\ref{section:querying-seq2seq}.
+
+The report starts with the description of the workflow and then analyzes in
+depth each step of it,
+from the three different methods used in the querying phase
+(sections \ref{section:querying-no-learning-algorithms} to \ref{section:querying-seq2seq})
+to the enriching phase (section \ref{section:enriching}). An important role
+is played by the use of BabelNet and BabelFy services to disambiguate the
+concepts of the knowledge base during both the querying and the enriching
+phase.
+
+%----------------------------------------------------------------------------------------
+
+\section{Workflow}
+\label{section:workflow}
+
+The bot manages different conversations independently. Before starting a
+conversation the user has to send a message to the bot, the bot than asks
+for the BabelNet domain and after the answer has arrived it chooses randomly
+to answer or to ask to a question. These two tasks are called querying and
+enriching.
+In the querying phase the user asks a question which is analyzed by the bot
+that gives an answer. In the enriching phase the bot asks for a question and it
+adds the answer received by the user to the knowledge base in order to improve
+its future answers.
+
+In this project three different methods have been studied for the querying
+phase. The first method doesn't make any use of learning algorithms, it's
+strongly tied to the question patterns and it uses them
+to extract concepts from the questions. The second method uses learning
+algorithms; here two different neural networks have been developed.
+The first one is a relation classifier, which maps a question to one of the
+16 relations used in the knowledge base, while the second is a concept extractor,
+which maps each word of the question to one of the two concepts or any other
+element that could be included in the question.
+
+In the enriching phase the bot generates a question by exploiting question
+patterns, a set of concepts depending on the domain chosen by the user and
+the relation associated to it which is chosen randomly. Once the answer has been
+received, the bot analyzes it and creates a tuple that will be added to the
+knowledge base by sending it to the knowledge base server via an HTTP request.
+
+%----------------------------------------------------------------------------------------
+
+\section{Querying: Without Learning Algorithms}
+\label{section:querying-no-learning-algorithms}
+
+Probably the easiest way to answer to questions is to exploit the question
+patterns. In fact, if the question asked by the user has the same structure
+of one of the questions contained in the set of the question patterns (e.g.
+``Where is Rome?'' has the same structure of the pattern ``Where is X?'') it
+becomes easier to extract the concepts from the questions (``Rome'' in the case of
+the previous example). The problem is thus reduced to match the received
+question to one of the question patterns.
+
+In the developed algorithm, the question patterns are first
+ordered depending on the Levenshtein distance between the question and each pattern,
+and are then compared with the question to see if there is a match. If a match
+is found, the concepts are searched in the knowledge base. If they are found
+in a tuple, the answer of the tuple will be send to the user as the answer.
+
+Here's a list of examples showing how this answer generator works:
+
+\textbf{User:} \textit{Is Teluk Ramunia in Johor?}
+
+\textbf{Bot:} \textit{Yes}
+
+\textbf{User:} \textit{Where is photoinitiator used?}
+
+\textbf{Bot:} \textit{It can be used to initialise radical polymerization e.g. in the preparation of acrylate polymers}
+
+\textbf{User:} \textit{What is the Colosseum?}
+
+\textbf{Bot:} \textit{I don't understand.}
+
+Note that in the last example the bot can't answer to the question because
+the pattern ``What is the X?'' is not included in the question patterns. This is
+the main problem of this method.
+
+%----------------------------------------------------------------------------------------
+
+\section{Querying: Using Learning Algorithms}
+\label{section:querying-with-learning}
+
+The problem of doing the querying step exploting question patterns, as seen
+previously, is that
+questions are strictly tied to them. Thus, if there is a typographical error in
+the question or, in general, if the question doesn't have the structure of any
+of the questions of the existing patterns the algorithm is not going to work
+well. Moreover the knowledge base is built to make use of relations and the
+method described earlier doesn't make any use of it.
+
+Probably the first method the comes to mind when trying to improve a na\"ive
+algorithm as the previous one is to use neural network. In particular it's
+possible to use a neural network to classify the sentence to the relation that
+is used in it and a neural network to map each word of the sentence to a concept.
+Once the relation has been defined and the concepts have been extracted, the
+problem is reduced to a search algorithm. In fact, at this step, the answer
+can be determined by searching the relation and the concept in the knowledge
+base.
+
+The relation classifier is composed of an embedding layer initialized with
+a vocabulary of 138K words directly created from the knowledge base, the word
+embeddings are initialized with Word2Vec. The embedding layer can be trained
+like the other layers in order to learn the embedding of the words that were
+not found in Word2Vec. This layer is followed by a BiLSTM of 250 hidden nodes
+and a Softmax layer of 16 nodes corresponding to the relations of the
+knowledge base. This models has been trained for 5 epochs using RMSprop
+reaching an accuracy of \textbf{98.781\%} on the test set. Note that the accuracy is computed on a vocabulary
+of 138K words, which is a subset of all the words included in the knowledge
+base. All the missing words are represented with the special token <UNK>.
+
+The structure of the concept extractor is similar to the structure of the
+relation classifier, with the exception of the output layer (a Softmax with
+7 nodes) and the fact that here each word, not the whole sentence is mapped to a value.
+For what regarding the output layer, each word can be a token of a
+concept (initial token, final token or both initial and final tokens) or another
+word. Moreover each word can be part of concept 1 or concept 2. The idea of the
+network is thus to distinguish the two concept and to differentiate between the
+words of the two concepts and the other words. The network could have been
+made of only three outputs (concept 1, concept 2, other), but on preliminary
+tests the network confused to map correctly words like ``the'' or ``a'', that
+could easily be part of a concept or another element of the sentence,
+and it didn't work well on concepts
+of multiple words. Before the training of the network, since the knowledge
+base is noisy, is necessary to remove bad tuples. Moreover some of the
+concepts are defined only with a BabelNet ID, thus a query to BabelNet it's
+needed in order to get the correct word. Since querying BabelNet for each
+concept is slow, a cache containing pairs of BabelNet IDs and words has been
+developed in order to speed up this process. This model, as the previous one,
+has been trained for 5 epochs using RMSprop reaching an accuracy of \textbf{94.273\%}.
+Notice, again, that the accuracy is computed on the same vocabulary as before.
+
+Here's a list of examples showing how the relation classifier and the concept
+extractor work:
+
+\textbf{User:} \textit{What is the Colosseum?}
+
+\textbf{Bot:} \textit{ampitheatre}
+
+\textbf{Relation:} \textit{GENERALIZATION}
+
+\textbf{Concepts:} \textit{Colosseum}
+
+\textbf{User:} \textit{Where is Dinsdale placed?}
+
+\textbf{Bot:} \textit{Darlington}
+
+\textbf{Relation:} \textit{PLACE}
+
+\textbf{Concepts:} \textit{Dinsdale}
+
+\textbf{User:} \textit{Is siege of Buda (1541) included in Kingdom of Norway?}
+
+\textbf{Bot:} \textit{no}
+
+\textbf{Relation:} \textit{PART}
+
+\textbf{Concepts:} \textit{Kingdom, None}
+
+\textbf{User:} \textit{How can I use hydroiodic acid?}
+
+\textbf{Bot:} \textit{It can be used to convert the starting material ( methanol}
+
+\textbf{Relation:} \textit{HOW\_TO\_USE}
+
+\textbf{Concepts:} \textit{hydroiodic}
+
+\textbf{User:} \textit{Can be Knowledge used as as a resource to render services for customers?}
+
+\textbf{Bot:} \textit{Yes}
+
+\textbf{Relation:} \textit{HOW\_TO\_USE}
+
+\textbf{Concepts:} \textit{render}, \textit{to}
+
+As it is possible to see from the examples, even if the bot answers correctly
+to some of the question it's not always because the extracted concepts are
+correct. In fact, while the relation classifier seems to work well in practice,
+the concept extractor easily makes mistakes; this happens in particular when there are two
+concepts in the question. This is mainly due to the fact the noise in the
+knowledge base, where most of the tuples are either incorrect or are defined
+with wrong concepts.
+
+%----------------------------------------------------------------------------------------
+
+\section{Querying: Seq2Seq}
+\label{section:querying-seq2seq}
+
+In the last few years developments on machine translation (MT), in particular 
+neural machine translation (NMT),
+led to the study of a model called Seq2Seq \cite{Sutskever:2014:SSL:2969033.2969173},
+which is basically an encoder-decoder \cite{cho-al-emnlp14}.
+Variations of Seq2Seq have been used not only to improve MT, but also to develop
+end-to-end approaches for question-answering systems \cite{journals/corr/VinyalsL15}.
+This method let to the development of two important datasets called SQuAD
+(Stanford Question Answering Dataset) \cite{squad-2016}
+and MS MARCO \cite{DBLP:conf/nips/NguyenRSGTMD16}. All top models are variations
+of Seq2Seq, which suggests that structure of this type are worth studying for
+question-answering systems.
+
+In this project a simple Seq2Seq model has been developed and tested on the
+knowledge base. The whole model has been
+developed in PyTorch, which makes the management of the network easier than
+Keras thanks to dynamic computational graphs. The interesting thing about
+Seq2Seq is, as said before, that it's an end-to-end approach, thus it's not necessary to perform
+multiple steps or develop a pipeline, the network generates the answer directly
+from a question.
+
+The Seq2Seq model is made of two parts: an encoder and a decoder. The aim of
+the encoder is to map a variable lenght sequence (the question) to a fixed
+length vector (also called context vector), while
+the aim of the decoder is to map a fixed length vector to a variable length
+sequence (the answer). Both the encoder and the decoder have an embedding
+layer that maps a word to its context vector. These layers are initialized
+with a vocabulary of 30K words and the embeddings are coming from Word2Vec as
+the other networks. The embedding layers are followed by 2 recurrent layers, here
+GRU are used instead of LSTM to make computations slightly faster whitout losing
+long term dependencies. GRU layers are made of 512 hidden units.
+The decoder has a Softmax layer as output in order to compute
+the probability of a word to be in a specific part of the sentence.
+
+The model has been trained using RMSprop for 2 epochs. The input of the encoder and the
+decoder are the source and the target sentences, which are made of indices
+corresponding to the indices of the words in the vocabulary used. To try to
+increase the amount of short term dependendecies the source sentences have
+been reversed, as done in \cite{Sutskever:2014:SSL:2969033.2969173}. At the end
+of each sentence a special token <EOS> has been appended. To speed up the training
+phase a set of four buckets has been used in order to reduce the amount of
+padding in the sentences. Moreover a large batch of 128 elements have been
+used to save time on tensor computations. The model has been trained
+for a little bit more than two days on a NVIDIA K80 using Google Compute Engine.
+Of course using such a large batch quickly increases the amount of memory that
+the GPU needs to do the computations on tensors. This affects negatively the number of
+hidden nodes, hidden layers, bidirectionality and the size of the vocabulary that
+must be smaller. Nevertheless the use of large batches was necessary because
+of a limited amount of credits on Google Cloud Engine.
+
+The models reached an accuracy of \textbf{33.271\%} on the test set. Consider, however,
+that the accuracy has been computed on a dataset created with a vocabulary of
+30K words. In fact, as it is possible to see from the following examples, the
+bot is not able to answer to the questions:
+
+\textbf{User:} \textit{What is the Colosseum?}
+
+\textbf{Bot:} \textit{Lydenburg honeycomb divert M\'{e}xico divert clarify reconstruct TL Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments Governments}
+
+\textbf{User:} \textit{Is Takamatsu Airport in Takamatsu?}
+
+\textbf{Bot:} \textit{zinc Charles}
+
+\textbf{User:} \textit{Is Xinjiang a type of autonomous region?}
+
+\textbf{Bot:} \textit{Anchorage squarees Panipat Oxnard Oxnard Oxnard Anchorage ruggedes Anchorage Georgetown Governments squarees Tourists talk cancer Tourists Pretoria overcome squarees recognize Governments squarees deny deny squarees recognize Governments deny squarees}
+
+\textbf{User:} \textit{Where is Liverpool?}
+
+\textbf{Bot:} \textit{Milford cutting transmit repel repel rabbits Governments Monday repel repel microorganisms Governments Monday Governments Monday transmit repel medicine cancer repel microorganisms Governments Monday Governments Carmel repel microorganisms Governments Monday}
+
+\textbf{User:} \textit{Is Roshven in Scotland?}
+
+\textbf{Bot:} \textit{M\'{e}xico Cubuk Charles Charles Charles Tigrinya Gazipasa transport repel refugees repel repel compress At repel magnetic Kizilcahamam modify modify}
+
+Even if this network doesn't work it's important to notice some behaviours.
+The first one is that for most of the answer the network has not learned to
+give them a short length; in fact, the greatest part had to be cut. Most of the
+questions start with a place, this could be due to the fact that the relation
+place is the most common relation in the knowledge base and that places are
+often used in other relations as well (e.g. for the answer ``Is Xinjiang a
+type of autonomous region?'' ``Anchorage'' is municipality in Alaska).
+
+The main reason why the network was not able to learn the answers is that the
+tuples of the knowledge base are noisy, most of them have, in fact, either wrong
+answers or a bad structure of the sentence. Moreover, due to a general
+unavailability of GPUs it was not possible to train the network for more than
+two days. This negatively affected the amount of the hidden units, which is
+generally larger and the size of the vocabulary used, which for this
+knowledge base is much bigger. This network is, by the way, a basic Seq2Seq;
+since the introduction of the latter a lot of progress has been made,
+from the introduction of an attention mechanism, which increases the accuracy of the
+network \cite{journals/corr/LuongPM15}, to a better management of the vocabulary, which could help to
+better handle all the words of the knowledge base \cite{jean-al-acl2015}. To conclude, these
+kind of networks are often trained for more than a week, also on multiple
+GPUs \cite{DBLP:journals/corr/WuSCLNMKCGMKSJL16}.
+
+All these development makes Seq2Seq worth studying, in particular because it's
+an end-to-end approach and it's easy to use once the training has finished.
+Of course, a well-finished dataset could easily help the network to reach
+higher accuracy faster, in particular if a teacher forcing method is used
+for the decoder input.
+
+%----------------------------------------------------------------------------------------
+
+\section{Enriching}
+\label{section:enriching}
+
+In the enriching phase the bot generates a question choosing the relation and
+the concepts randomly depending on the domain chosen by the user. Once the
+answer has been received the bot analyzes it and it sends a tuple to the knowledge
+base server in order to improve its behaviour in the future.
+
+Each BabelNet domain is associated with a set of relations, each question pattern
+is associated to a relation and each concept is associated to a BabelNet domain.
+With all of this it's possible to generate a question with ease. The developed
+algorithm chooses a relation and a concept randomly depending on the BabelNet
+domain chosen by the user at the beginning of the conversation. Then a question
+is chosen randomly from a set of question patterns depending on the relation
+of the previous step. Each question can include one or two concepts in its
+structure, i.e. the questions can be of the form ``Where is X?'' or ``Is X in Y?''.
+In the latter case another concept needs to be extracted from a set of concepts (again,
+depending on the BabelNet domain) in order to complete the generation of the
+question.
+At this point the algorithm substitues ``X'' and ``Y'' with the corresponding
+concepts creating the question, which is sent to the user.
+
+Once the user has answered to the question, if the latter contains only one
+concept, another concept needs to be extracted from the answer in order to send the
+correct tuple to the server. Here, a neural network, different from the one
+used in \ref{section:querying-with-learning}, is used to extract the concept.
+This neural network maps each word of the sentence to a concept or another
+element. In particular each word can be the first word of the concept, the last
+word of the concept, the concept itself or any another kind of word. Before sending the
+tuple to the server, the service BabelyFy is
+used to disambiguate the just found concept in order to send the correct BabelNet ID.
+Of course this last step is not needed if the question already contains two
+concepts.
+
+Before training the network, each tuple of the knowledge base is
+preprocessed in order to remove malformed tuples and to convert BabelNet IDs
+to words. Here a cache of BabelNet IDs is used in order to reduce to amount of
+requests to the server and speed up the preprocessing phase.
+
+The neural network has been developed using Keras. It is composed by an
+embedding layer (initialized with an embedding matrix created from a vocabulary
+of 138K words directly extracted from the knowledge base and Word2Vec), a BiLSTM of 250
+hidden cells and a Softmax layer with four outputs corresponding to the
+classes described above. The optimizer used is RMSprop and the network has been
+trained for 5 epochs reaching an accuracy of \textbf{99.104\%} on the test set.
+Note, again, that the accuracy is computed on a vocabulary of 138K words.
+
+Here's a list of examples showing how the question generator and the concept
+extractor work:
+
+\textbf{Bot:} \textit{What shape does Marasmium have?}
+
+\textbf{User:} \textit{It has the shape of a mushroom}
+
+\textbf{Concept extracted:} \textit{mushroom::bn:00056435n}
+
+\textbf{Bot:} \textit{On which date was Cobwebs to Catch Flies held?}
+
+\textbf{User:} \textit{It was not held, it was written in 1783}
+
+\textbf{Concept extracted:} \textit{1783}
+
+\textbf{Bot:} \textit{What is Istanbul Samandira Army Air Base?}
+
+\textbf{User:} \textit{It's a military base}
+
+\textbf{Concept extracted:} \textit{military base}
+
+%----------------------------------------------------------------------------------------
+
+\section{Conclusion}
+
+Developing a good question-answering system is a hard task, in particular when
+the dataset is noisy and there is no availability of GPUs. This project compares
+different approaches to solve this problem. Developing na\"ive algorithms
+is easy, but comes at a price: the amount of questions that it supports is
+limited. Methods based on neural networks are somehow able to generalize the
+problem but doesn't work well if the data is noisy. The papers
+regarding state-of-the-art methods on SQuAD and MS MARCO make Seq2Seq approaches
+both promising and interesting to study, but when the amount of data becomes
+huge it becomes very hard to handle all the information with a single network,
+making pipelines still a better choice for the development of good
+question-answering systems.
+
+%----------------------------------------------------------------------------------------
+
+\section*{Appendix: Implementation}
+\label{section:appendix}
+
+The whole project has been developed in Python, using Keras built on top of
+Tensorflow and PyTorch. All the models have been trained splitting the
+data into a training set (60\%), a validation set (20\%) and a test set (20\%)
+after the preprocessing. Here's a list of the files included in the project
+with a brief description of each one:
+
+\begin{itemize}
+	\item \textbf{AnswerGenerator.py}: this file contains the implementation of the
+		algorithm described in section \ref{section:querying-no-learning-algorithms}.
+	\item \textbf{BabelNetCache.py}: a class that improves the performances of the bot
+		by reducing the amount of requests to BabelNet, this is possible
+		bacause of a cache file that stores pairs of BabelNet IDs and conncepts.
+	\item \textbf{bot.py}: this is the main file of the project, it implements the
+		workflow and uses all the models generated during the training phase,
+		managing the communication with the Knowledge Base Server and
+		the communication with the users using Telegram APIs.
+	\item \textbf{download\_kb.py}: this script downloads the whole knowledge base
+		from the knowledge base server saving all the data on a single JSON file.
+	\item \textbf{KnowledgeBase.py}: an auxiliary class used to load the knowledge base
+		from a JSON file and to search a tuple containing a certain relation
+		and the two concepts of the tuple itself, this last step is
+		particularly useful to generate the answer once the relation and the
+		concepts have been extracted from the question asked by the user.
+	\item \textbf{patterns.py}: this script collects all the pattern files into a single
+		file removing bad patterns, it is supposed to be used after having removed
+		malformed files and a double check by hand of the final file is needed
+		to have a correct set of patterns.
+	\item \textbf{query\_kb.py}: this script could be used to test the bot by randomly
+		selecting a tuple from the knowledge base or by searching a sentence
+		between the questions and the answers of it.
+	\item \textbf{QuestionGenerator.py}: the algorithm described in section
+		\ref{section:enriching}, where questions are generated during the
+		enriching phase.
+	\item \textbf{QuestionPatterns.py}: an auxiliary class that manages the question
+		patterns storying them by relation.
+	\item \textbf{seq2seq.Seq2Seq.py}: the neural network (described in section
+		 \ref{section:querying-seq2seq}) which implements Seq2Seq using PyTorch.
+	\item \textbf{seq2seq.utils.py}: a set of axiliary functions used to train and evaluate
+		Seq2Seq network.
+	\item \textbf{train.py}: this file is responsible for the training of all the models
+		used by the bot, it preprocesses the knowledge base for each model
+		by removing useless tuples and by creating the input and the outputs
+		used by the neural networks. Both Keras and PyTorch are used here.
+	\item \textbf{utils.py}: a set of functions used to communicate with BabelNet and
+		BabelFy and process outputs and inputs of the neural networks.
+	\item \textbf{vocabulary\_from\_kb.py}: an auxiliary script used to build
+		a vocabulary depending on the frequency of the words found in the
+		questions and the answers of the knowledge base.
+	\item \textbf{Vocabulary.py}: an auxiliary class used to manage a vocabulary
+		file plus special symbols like <PAD>, <UNK>, <GO>, <EOS>.
+	\item \textbf{Word2Vec.py}: an auxiliary class which is used to create embedding
+		matrices exploiting the Word2Vec model made available by
+		Google \cite{DBLP:journals/corr/abs-1301-3781}.
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+
+\newpage
+\bibliography{bibliography}
+\bibliographystyle{ieeetr}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
+\grid
+\grid
