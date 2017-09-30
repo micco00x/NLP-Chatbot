@@ -150,13 +150,13 @@ class AnswerGenerator:
 					elif "::" in c1:
 						idx = c1.index("::")
 						w = c1[:idx].lower()
-						if conceptX in w:
+						if conceptX == w:
 							matchX = True
 					elif "bn:" in c1:
 						try:
 							bn_conceptx = babelNetCache.cache[c1[c1.index("bn:"):]].lower()
 							#print("bn_conceptx:", bn_conceptx)
-							if conceptX in bn_conceptx or bn_conceptx in conceptX:
+							if conceptX == bn_conceptx:
 								matchX = True
 						except:
 							pass
@@ -171,13 +171,13 @@ class AnswerGenerator:
 					elif "::" in c2:
 						idx = c2.index("::")
 						w = c2[:idx].lower()
-						if conceptY in w:
+						if conceptY == w:
 							matchY = True
 					elif "bn:" in c2:
 						try:
 							bn_concepty = babelNetCache.cache[c2[c2.index("bn:"):]].lower()
 							#print("bn_concepty:", bn_concepty)
-							if conceptY in bn_concepty or bn_concepty in conceptY:
+							if conceptY == bn_concepty:
 								matchY = True
 						except:
 							pass
