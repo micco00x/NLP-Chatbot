@@ -21,6 +21,8 @@ it's necessary to type:
 python3 bot.py ../models/hparams.json --conceptextractor --bothQA
 ~~~~
 
+The username of the bot on Telegram is `@cip_nlp_chatbot`.
+
 ## How to Train the networks
 To train the networks it's necessary to specify the structure of them with a JSON
 file, for example:
