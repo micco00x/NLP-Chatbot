@@ -232,7 +232,7 @@ def handle(msg):
 					relation = int_to_relation(np.argmax(relation_classifier.predict(np.array(q_rcNN))[0]))
 					probability_concept = concept_extractor_question.predict(np.array(concept_extractor_question_vocabulary.sentence2indices(user_status[chat_id].question)))
 				
-				print(probability_concept)
+				#print(probability_concept)
 				
 				concepts_tokens = probabilities_to_c1_c2(probability_concept)
 				question_punctuation_split = split_words_punctuation(user_status[chat_id].question)
@@ -297,7 +297,7 @@ def handle(msg):
 				c2 = user_status[chat_id].question_data["id2"]
 				with graph.as_default():
 					c1_probability_concept = concept_extractor_answer.predict(np.array(concept_extractor_answer_vocabulary.sentence2indices(answer)))
-				print(c1_probability_concept)
+				#print(c1_probability_concept)
 				c1_tokens = probabilities_to_concept_tokens(c1_probability_concept)
 				print("c1_tokens:", c1_tokens)
 				# NN tokens indices to BabelNet token indices:
@@ -308,7 +308,7 @@ def handle(msg):
 				for idx, w in enumerate(answer_split):
 					if answer_punctuation_split[c1_tokens[1]] in w:
 						c1_tokens[1] = idx
-				print("c1_tokens:", c1_tokens)
+				#print("c1_tokens:", c1_tokens)
 				c1 = babelfy_disambiguate(answer, c1_tokens[0], c1_tokens[1])
 				data_c1 = c1
 				data_c2 = user_status[chat_id].question_data["c2"] + "::" + c2
